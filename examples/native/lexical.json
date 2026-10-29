@@ -1,0 +1,12 @@
+{
+  "question": "prefera alice. What item is at the workplace of that person?",
+  "people": [
+    "alice",
+    "bob",
+    "carol",
+    "david",
+    "erin",
+    "frank"
+  ],
+  "full": true
+}

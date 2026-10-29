@@ -1,0 +1,17 @@
+[package]
+name = "sejong-train"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Data batches, backward execution, optimizers and checkpoints."
+
+[dependencies]
+memmap2 = "0.9.12"
+sejong-core.workspace = true
+sejong-gpu.workspace = true
+sejong-model.workspace = true
+sejong-runtime.workspace = true
+blake3 = "1"
+
+serde = { version = "1.0.229", features = ["derive"] }

@@ -1,0 +1,12 @@
+{
+  "question": "alice called bob. What item is at the workplace of the called person?",
+  "people": [
+    "alice",
+    "bob",
+    "carol",
+    "david",
+    "erin",
+    "frank"
+  ],
+  "full": true
+}

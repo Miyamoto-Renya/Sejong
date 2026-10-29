@@ -1,0 +1,14 @@
+[package]
+name = "sejong-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Graph execution, sessions, private caches and generation."
+
+[dependencies]
+sejong-core.workspace = true
+sejong-gpu.workspace = true
+sejong-model.workspace = true
+
+serde = { version = "1.0.229", features = ["derive"] }

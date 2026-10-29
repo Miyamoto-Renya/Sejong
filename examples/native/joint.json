@@ -1,0 +1,8 @@
+{
+  "joint": [
+    "alice",
+    "alice",
+    "bob"
+  ],
+  "goal": 1
+}

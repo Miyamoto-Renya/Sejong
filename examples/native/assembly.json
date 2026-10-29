@@ -1,0 +1,53 @@
+{
+  "scene": "role-0/model",
+  "instruction": "role-1/model",
+  "request": "role-2/model",
+  "query": "role-3/model",
+  "lexica": [
+    "role-4/model",
+    "role-5/model"
+  ],
+  "a": {
+    "kind": "memory",
+    "path": "a/model"
+  },
+  "b": {
+    "kind": "memory",
+    "path": "b/model"
+  },
+  "catalog": [
+    "alice",
+    "bob",
+    "carol",
+    "david",
+    "erin",
+    "frank",
+    "persona",
+    "personb",
+    "personc",
+    "persond",
+    "persone",
+    "personf",
+    "persong",
+    "personh",
+    "personi",
+    "personj",
+    "personk",
+    "personl",
+    "personm",
+    "personn",
+    "persono",
+    "personp",
+    "personq",
+    "personr",
+    "persons",
+    "persont",
+    "personu",
+    "personv",
+    "personw",
+    "personx",
+    "persony",
+    "personz"
+  ],
+  "budgets": {}
+}

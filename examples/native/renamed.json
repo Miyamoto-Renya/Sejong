@@ -1,0 +1,12 @@
+{
+  "question": "personu called personv. What item is at the workplace of the called person?",
+  "people": [
+    "personu",
+    "personv",
+    "personw",
+    "personx",
+    "persony",
+    "personz"
+  ],
+  "full": true
+}

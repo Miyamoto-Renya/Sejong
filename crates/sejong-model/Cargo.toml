@@ -1,0 +1,18 @@
+[package]
+name = "sejong-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Independent byte, semantic and prepared direct-memory originals."
+
+[dependencies]
+memmap2 = "0.9.12"
+safetensors = "0.8.0"
+sejong-core.workspace = true
+sejong-gpu.workspace = true
+
+serde = { version = "1.0.229", features = ["derive"] }
+blake3 = "1"
+
+tokenizers = { version = "0.22", default-features = false, features = ["fancy-regex"] }

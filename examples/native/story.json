@@ -1,0 +1,23 @@
+{
+  "question": "Where does the first person whom alice called work?",
+  "story": [
+    "alice called bob.",
+    "bob thanked carol."
+  ],
+  "people": [
+    "alice",
+    "bob",
+    "carol",
+    "david",
+    "erin",
+    "frank"
+  ],
+  "predicates": [
+    "called",
+    "thanked",
+    "helped",
+    "invited",
+    "visited"
+  ],
+  "full": true
+}

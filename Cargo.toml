@@ -1,0 +1,20 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[workspace.dependencies]
+sejong-core = { path = "crates/sejong-core" }
+sejong-gpu = { path = "crates/sejong-gpu" }
+sejong-model = { path = "crates/sejong-model" }
+sejong-runtime = { path = "crates/sejong-runtime" }
+sejong-train = { path = "crates/sejong-train" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

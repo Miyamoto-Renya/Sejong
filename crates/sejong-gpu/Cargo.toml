@@ -1,0 +1,11 @@
+[package]
+name = "sejong-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Device resources, memory, streams and Triton kernel launching."
+
+[dependencies]
+libloading = "0.9.0"
+sejong-core.workspace = true

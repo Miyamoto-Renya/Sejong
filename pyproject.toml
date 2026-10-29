@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sejong-kernels"
+version = "0.1.0"
+description = "Sejong GPU kernels and compiler bridge, written in Python and Triton"
+requires-python = ">=3.12"
+dependencies = ["triton==3.8.0+git669b31ac.rocm10.1.0", "numpy>=2.0", "safetensors>=0.5"]
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["sejong_kernels*"]

@@ -1,0 +1,23 @@
+{
+  "question": "What item is at the workplace of the first person whom the first person whom alice called thanked?",
+  "story": [
+    "alice called bob.",
+    "bob thanked carol."
+  ],
+  "people": [
+    "alice",
+    "bob",
+    "carol",
+    "david",
+    "erin",
+    "frank"
+  ],
+  "predicates": [
+    "called",
+    "thanked",
+    "helped",
+    "invited",
+    "visited"
+  ],
+  "full": true
+}

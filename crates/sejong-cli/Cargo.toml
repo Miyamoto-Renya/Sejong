@@ -1,0 +1,24 @@
+[package]
+name = "sejong-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Sejong command-line entry point."
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+sejong-core.workspace = true
+sejong-runtime.workspace = true
+sejong-train.workspace = true
+
+[[bin]]
+name = "sejong"
+path = "src/main.rs"
+
+[dependencies.sejong-model]
+workspace = true
+
+[dependencies.sejong-gpu]
+workspace = true
