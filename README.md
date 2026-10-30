@@ -60,3 +60,7 @@ Memory는 선언된 context마다 동일한 FP64 실행 경로의 full/direct �
 [구조](docs/architecture.md), [입력 규격](docs/native-data.md), [구현 대응표](docs/implementation-map.md), [GPU 경계](docs/gpu-boundary.md)에 실행 계약을 기록한다.
 
 `bash scripts/check-system.sh`는 확장된 합성, 파서 학습·재개, memory 준비·개정을 세 묶음으로 확인한다. `native_system` 예제는 지정한 자료를 실제 학습하고 gold 질의 결과를 저장하는 전체 학습 실행이다. 환경 의존성은 `requirements-rocm.txt`와 `Cargo.lock`에 고정한다.
+
+## 라이선스
+
+Sejong 코드는 [Apache License 2.0](LICENSE)으로 배포한다. 외부 모델과 데이터는 각각의 출처와 라이선스 조건을 따른다.

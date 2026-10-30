@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "sejong-kernels"
 version = "0.1.0"
 description = "Sejong GPU kernels and compiler bridge, written in Python and Triton"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = ["triton==3.8.0+git669b31ac.rocm10.1.0", "numpy>=2.0", "safetensors>=0.5"]
 
