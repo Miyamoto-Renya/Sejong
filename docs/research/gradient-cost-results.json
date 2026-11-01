@@ -1,0 +1,217 @@
+{
+  "date": "2026-11-01",
+  "execution": {
+    "kind": "cpu_algebra_and_shape_accounting",
+    "python": "3.14.4",
+    "numpy": "2.3.5",
+    "gpu_device_paths": {
+      "/dev/kfd": false,
+      "/dev/dri": false
+    }
+  },
+  "source_sha256": {
+    "configs/sejong.toml": "cbc32ebbbb8101678636d156beb7ef530844724471936b7b9653d3bc9fb4866d",
+    "crates/sejong-model/src/lib.rs": "5c386b1cf92222e3cbccf6d9d8f52a20020fc9579782b56113ca90cbc4792a40",
+    "crates/sejong-train/src/lib.rs": "8bb16526738732b7e9b543f02821054889fd1c59710ae98cb61907b5351c74f9",
+    "crates/sejong-gpu/src/graph.rs": "1aba77f3f07c743fa511f6acdba61477d4db314a708f89e07aabd84d0b9cadf0",
+    "scripts/research-gradient-cost.py": "6f941281a74b25096cf870e1c1c27fc10bd6b58f214088c6bba2bb5741b8e045"
+  },
+  "identities": {
+    "scope": "고정 벡터·행렬의 추정량 항등식, 모든 부호·제어 부분집합 열거",
+    "forward_gradient": {
+      "dimension": 8,
+      "directions": 256,
+      "mean_max_abs_error": 4.440892098500626e-16,
+      "variance_abs_error": 7.105427357601002e-15,
+      "relative_mse_one_direction": 7
+    },
+    "control_subset": {
+      "dense_m1": {
+        "microbatches": 8,
+        "controls": 1,
+        "subsets": 8,
+        "mean_max_abs_error": 2.220446049250313e-16,
+        "variance_abs_error": 0.0,
+        "observed_variance": 1.8650788060219416,
+        "predicted_variance": 1.8650788060219416
+      },
+      "dense_m2": {
+        "microbatches": 8,
+        "controls": 2,
+        "subsets": 28,
+        "mean_max_abs_error": 2.220446049250313e-16,
+        "variance_abs_error": 0.0,
+        "observed_variance": 0.7993194882951179,
+        "predicted_variance": 0.7993194882951179
+      },
+      "dense_m4": {
+        "microbatches": 8,
+        "controls": 4,
+        "subsets": 70,
+        "mean_max_abs_error": 2.220446049250313e-16,
+        "variance_abs_error": 5.551115123125783e-17,
+        "observed_variance": 0.2664398294317059,
+        "predicted_variance": 0.26643982943170597
+      },
+      "dense_m8": {
+        "microbatches": 8,
+        "controls": 8,
+        "subsets": 1,
+        "mean_max_abs_error": 1.1102230246251565e-16,
+        "variance_abs_error": 7.958905495180252e-32,
+        "observed_variance": 7.958905495180252e-32,
+        "predicted_variance": 0.0
+      },
+      "constant_prediction_bias": {
+        "microbatches": 8,
+        "controls": 2,
+        "subsets": 28,
+        "mean_max_abs_error": 4.371503159461554e-16,
+        "variance_abs_error": 2.695304565563787e-31,
+        "observed_variance": 4.042458170056509e-31,
+        "predicted_variance": 1.3471536044927218e-31
+      },
+      "disjoint_page_support": {
+        "microbatches": 8,
+        "controls": 2,
+        "subsets": 28,
+        "mean_max_abs_error": 2.220446049250313e-16,
+        "variance_abs_error": 0.0,
+        "observed_variance": 0.1932863930591324,
+        "predicted_variance": 0.1932863930591324
+      }
+    },
+    "mixed_adjoint_max_abs_error": 4.440892098500626e-16,
+    "selection_dependent_predictor": {
+      "mean_factor_relative_to_true_gradient": 0.25,
+      "identity_max_abs_error": 2.7755575615628914e-17
+    }
+  },
+  "costs": {
+    "current_default": {
+      "parameters": 27534848,
+      "fp32_weight_gradient_adam_floor_gib": 0.41030120849609375,
+      "weight_storage_dtype": "fp32",
+      "token_unit": "UTF-8 byte + EOS"
+    },
+    "dense_4b": {
+      "parameters": 4000000000,
+      "fp32_weight_gradient_adam_floor_gib": 59.604644775390625,
+      "fp16_weights_gib": 7.450580596923828,
+      "forward_gradient_relative_mse_32_rademacher_directions": 124999999.96875
+    },
+    "candidate_shape": {
+      "width": 1024,
+      "layers": 12,
+      "ffn_width": 2048,
+      "vocabulary": 257,
+      "banks": 4,
+      "key_side": 86,
+      "pages_per_bank": 7396,
+      "page_hidden_width": 64,
+      "selected_pages_per_bank": 2,
+      "routing_span_bytes": 32,
+      "predictor_rank": 32,
+      "core_parameters": 126381056,
+      "memory_parameters": 3877634048,
+      "router_parameters": 352256,
+      "inference_parameters": 4004367360,
+      "training_predictor_parameters": 15018688,
+      "page_parameters": 131072,
+      "page_fp32_mib": 0.5,
+      "active_memory_parameters_per_byte": 1048576,
+      "resident_core_and_router_plus_active_memory_parameters": 127781888,
+      "host_memory_weights_gib": 14.4453125,
+      "host_factored_second_moments_gib": 0.23981475830078125,
+      "host_pending_page_gradients_max_gib": 0.5
+    },
+    "gpu_budget_assumptions_gib": {
+      "core_router_fp32_weights_gradients_adam_fp16_copy": 2.124532699584961,
+      "predictors_fp32_weights_gradients_adam": 0.22379589080810547,
+      "fp32_page_cache": 2.0,
+      "activations_reservation": 1.0,
+      "scratch_reservation": 0.75,
+      "page_gradient_staging": 0.0625,
+      "sum": 6.160828590393066
+    },
+    "routing_traffic": [
+      {
+        "span_bytes": 1,
+        "sequence_bytes": 512,
+        "routing_decisions_per_bank": 512,
+        "uniform_expected_distinct_pages": 3825.575637835536,
+        "cold_weight_h2d_mib": 1912.787818917768,
+        "cold_weight_h2d_d2h_mib": 3825.575637835536,
+        "weight_cache_hit_assumption": 0,
+        "max_gradient_pages_per_microbatch": 4096,
+        "max_gradient_mib_per_microbatch": 2048.0,
+        "max_gradient_mib_per_accumulation": 14792.0
+      },
+      {
+        "span_bytes": 8,
+        "sequence_bytes": 512,
+        "routing_decisions_per_bank": 64,
+        "uniform_expected_distinct_pages": 507.6629969044392,
+        "cold_weight_h2d_mib": 253.8314984522196,
+        "cold_weight_h2d_d2h_mib": 507.6629969044392,
+        "weight_cache_hit_assumption": 0,
+        "max_gradient_pages_per_microbatch": 512,
+        "max_gradient_mib_per_microbatch": 256.0,
+        "max_gradient_mib_per_accumulation": 2048.0
+      },
+      {
+        "span_bytes": 32,
+        "sequence_bytes": 512,
+        "routing_decisions_per_bank": 16,
+        "uniform_expected_distinct_pages": 127.7407275288391,
+        "cold_weight_h2d_mib": 63.87036376441955,
+        "cold_weight_h2d_d2h_mib": 127.7407275288391,
+        "weight_cache_hit_assumption": 0,
+        "max_gradient_pages_per_microbatch": 128,
+        "max_gradient_mib_per_microbatch": 64.0,
+        "max_gradient_mib_per_accumulation": 512.0
+      }
+    ],
+    "span32_cold_transfer_time_s_at_assumed_effective_gbytes_s": {
+      "4": 0.03348646527732,
+      "8": 0.01674323263866,
+      "12": 0.011162155092439998
+    },
+    "gradient_arithmetic_sensitivity": [
+      {
+        "controls_of_eight": 1,
+        "predictor_matmul_overhead_forward_units": 0.13844754724412645,
+        "matmul_cost_ratio_to_exact_no_recompute": 0.7544825157480423,
+        "matmul_step_speed_ratio": 1.3254117612103125,
+        "centered_residual_variance_ratio_break_even": 0.04648739445861606
+      },
+      {
+        "controls_of_eight": 2,
+        "predictor_matmul_overhead_forward_units": 0.15781532967345313,
+        "matmul_cost_ratio_to_exact_no_recompute": 0.8026051098911511,
+        "matmul_step_speed_ratio": 1.2459427278448545,
+        "centered_residual_variance_ratio_break_even": 0.08198090928161816
+      },
+      {
+        "controls_of_eight": 4,
+        "predictor_matmul_overhead_forward_units": 0.1965508945321065,
+        "matmul_cost_ratio_to_exact_no_recompute": 0.8988502981773688,
+        "matmul_step_speed_ratio": 1.1125323115848502,
+        "centered_residual_variance_ratio_break_even": 0.11253231158485022
+      },
+      {
+        "controls_of_eight": 8,
+        "predictor_matmul_overhead_forward_units": 0.27402202424941324,
+        "matmul_cost_ratio_to_exact_no_recompute": 1.0913406747498045,
+        "matmul_step_speed_ratio": 0.916304159770509,
+        "centered_residual_variance_ratio_break_even": null
+      }
+    ],
+    "predictor_arithmetic": {
+      "reference_core_linear_parameters": 126092288,
+      "predictor_forward_matmul_ratio": 0.11907976481479977,
+      "predictor_backward_matmul_ratio_per_control": 0.15494225943461348,
+      "accounting_scope": "선형 행렬곱; attention·점별 연산·optimizer·전송은 별도 항"
+    }
+  }
+}

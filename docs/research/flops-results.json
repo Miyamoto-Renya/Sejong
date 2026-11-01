@@ -1,0 +1,475 @@
+{
+  "research_date": "2026-11-01",
+  "python": "3.14.4",
+  "numpy": "2.3.5",
+  "convention": {
+    "fma_flops": 2,
+    "scope": "행렬곱·attention 내적 및 명시한 SGD·변환 비용; exp/sigmoid/norm/형변환·통신은 별도 항",
+    "scalar_dimension_sums": "내적·가중합은 2d 관례",
+    "gpu_timing": "후속 커널 실행에서 측정"
+  },
+  "source_sha256": {
+    "scripts/research-flops.py": "90324f1baa70db35596391433189daf2f5c88e9cd57e1f249b834f82b8a10a98",
+    "configs/sejong.toml": "cbc32ebbbb8101678636d156beb7ef530844724471936b7b9653d3bc9fb4866d",
+    "python/sejong_kernels/ops/kernels.py": "cc51d13289ac2fa705958778bcb0ccf5ac4f564d114d02bdf5dc308641a20237"
+  },
+  "current_default": {
+    "shape": {
+      "width": 512,
+      "layers": 8,
+      "ffn": 1536,
+      "heads": 8,
+      "vocabulary": 257
+    },
+    "parameters": 27534848,
+    "positions": 512,
+    "checkpoint": true,
+    "tile_padding_counted": false,
+    "matrix_forward": 28052029440,
+    "matrix_backward": 56104058880,
+    "matrix_recompute": 27917287424,
+    "attention_forward_dots": 2151677952,
+    "attention_backward_dots": 8610906112,
+    "attention_recompute_dots": 2151677952,
+    "counted_flops": 124987637760,
+    "counted_flops_per_position": 244116480.0
+  },
+  "current_default_tiled": {
+    "shape": {
+      "width": 512,
+      "layers": 8,
+      "ffn": 1536,
+      "heads": 8,
+      "vocabulary": 257
+    },
+    "parameters": 27534848,
+    "positions": 512,
+    "checkpoint": true,
+    "tile_padding_counted": true,
+    "matrix_forward": 28068282368,
+    "matrix_backward": 56136564736,
+    "matrix_recompute": 27917287424,
+    "attention_forward_dots": 2281701376,
+    "attention_backward_dots": 9130999808,
+    "attention_recompute_dots": 2281701376,
+    "counted_flops": 125816537088,
+    "counted_flops_per_position": 245735424.0
+  },
+  "dense_4b": {
+    "shape": {
+      "width": 2560,
+      "layers": 32,
+      "ffn": 12800,
+      "heads": 40,
+      "vocabulary": 257
+    },
+    "parameters": 3986071040,
+    "positions": 512,
+    "checkpoint": false,
+    "tile_padding_counted": false,
+    "matrix_forward": 4080892641280,
+    "matrix_backward": 8161785282560,
+    "matrix_recompute": 0,
+    "attention_forward_dots": 43033559040,
+    "attention_backward_dots": 172218122240,
+    "attention_recompute_dots": 0,
+    "counted_flops": 12457929605120,
+    "counted_flops_per_position": 24331893760.0
+  },
+  "dense_4b_checkpointed": {
+    "shape": {
+      "width": 2560,
+      "layers": 32,
+      "ffn": 12800,
+      "heads": 40,
+      "vocabulary": 257
+    },
+    "parameters": 3986071040,
+    "positions": 512,
+    "checkpoint": true,
+    "tile_padding_counted": false,
+    "matrix_forward": 4080892641280,
+    "matrix_backward": 8161785282560,
+    "matrix_recompute": 4080218931200,
+    "attention_forward_dots": 43033559040,
+    "attention_backward_dots": 172218122240,
+    "attention_recompute_dots": 43033559040,
+    "counted_flops": 16581182095360,
+    "counted_flops_per_position": 32385121280.0
+  },
+  "dense_4b_tiled": {
+    "shape": {
+      "width": 2560,
+      "layers": 32,
+      "ffn": 12800,
+      "heads": 40,
+      "vocabulary": 257
+    },
+    "parameters": 3986071040,
+    "positions": 512,
+    "checkpoint": false,
+    "tile_padding_counted": true,
+    "matrix_forward": 4080973905920,
+    "matrix_backward": 8161947811840,
+    "matrix_recompute": 0,
+    "attention_forward_dots": 45634027520,
+    "attention_backward_dots": 182619996160,
+    "attention_recompute_dots": 0,
+    "counted_flops": 12471175741440,
+    "counted_flops_per_position": 24357765120.0
+  },
+  "dense_4b_context2048": {
+    "shape": {
+      "width": 2560,
+      "layers": 32,
+      "ffn": 12800,
+      "heads": 40,
+      "vocabulary": 257
+    },
+    "parameters": 3986071040,
+    "positions": 2048,
+    "checkpoint": false,
+    "tile_padding_counted": false,
+    "matrix_forward": 16323570565120,
+    "matrix_backward": 32647141130240,
+    "matrix_recompute": 0,
+    "attention_forward_dots": 687530311680,
+    "attention_backward_dots": 2750456791040,
+    "attention_recompute_dots": 0,
+    "counted_flops": 52408698798080,
+    "counted_flops_per_position": 25590184960.0
+  },
+  "factorized_local": [
+    {
+      "microbatches": 8,
+      "controls": 2,
+      "rank": 32,
+      "components": {
+        "main_matrix_forward": 32641751449600,
+        "main_exact_matrix_backward": 16320875724800,
+        "predictor_hidden_features": 588527960064,
+        "factor_contraction": 236223201280,
+        "factor_lift_once_per_step": 255013683200,
+        "predictor_training": 388723900416,
+        "exact_output_head": 16169041920,
+        "attention_dots": 688704716800,
+        "sgd_update": 7972142080
+      },
+      "counted_flops": 51143961820160,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.5131257031679226,
+      "reference_over_candidate": 1.9488402039231811,
+      "scope": "행렬곱·attention 내적·본체 SGD; 작은 norm/embedding 예측과 점별 연산은 별도 항"
+    },
+    {
+      "microbatches": 8,
+      "controls": 4,
+      "rank": 32,
+      "components": {
+        "main_matrix_forward": 32641751449600,
+        "main_exact_matrix_backward": 32641751449600,
+        "predictor_hidden_features": 588527960064,
+        "factor_contraction": 236223201280,
+        "factor_lift_once_per_step": 255013683200,
+        "predictor_training": 777447800832,
+        "exact_output_head": 16169041920,
+        "attention_dots": 1033140961280,
+        "sgd_update": 7972142080
+      },
+      "counted_flops": 68197997689856,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.6842282895936639,
+      "reference_over_candidate": 1.4615005184802583,
+      "scope": "행렬곱·attention 내적·본체 SGD; 작은 norm/embedding 예측과 점별 연산은 별도 항"
+    }
+  ],
+  "proxy_correction": [
+    {
+      "microbatches": 8,
+      "controls": 2,
+      "rank": 16,
+      "refresh_every_steps": 32,
+      "main_checkpoint": false,
+      "proxy_parameters": 13899264,
+      "coefficient_parameters": 3751936,
+      "basis_entries": 34123792,
+      "linear_parameters": 3985246720,
+      "components": {
+        "main_full_forward_backward": 24915859210240,
+        "proxy_forward_backward_all_microbatches": 381291593728,
+        "coefficient_forward": 60030976,
+        "coefficient_backward_controls": 30015488,
+        "true_gradient_projection_controls": 70003490816,
+        "factor_lift_once_per_step": 127821627904,
+        "basis_refresh_amortized": 16016607264.0,
+        "two_control_gradient_diagnostics": 11958673920,
+        "main_sgd": 7972142080,
+        "proxy_and_coefficient_sgd": 35302400
+      },
+      "one_basis_refresh_flops": 512531432448,
+      "counted_flops": 25531048694816.0,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.2561521800013918,
+      "reference_over_candidate": 3.90392929700839,
+      "residual_variance_ratio_break_even": 0.9679764323361301,
+      "variance_cost_score": {
+        "0": 0.2561521800013918,
+        "0.1": 0.3329978340018093,
+        "0.25": 0.44826631500243563,
+        "0.5": 0.6403804500034794,
+        "0.9": 0.9477630660051496,
+        "1": 1.0246087200055671
+      }
+    },
+    {
+      "microbatches": 8,
+      "controls": 2,
+      "rank": 32,
+      "refresh_every_steps": 32,
+      "main_checkpoint": false,
+      "proxy_parameters": 13899264,
+      "coefficient_parameters": 14811136,
+      "basis_entries": 68247584,
+      "linear_parameters": 3985246720,
+      "components": {
+        "main_full_forward_backward": 24915859210240,
+        "proxy_forward_backward_all_microbatches": 381291593728,
+        "coefficient_forward": 236978176,
+        "coefficient_backward_controls": 118489088,
+        "true_gradient_projection_controls": 140242911232,
+        "factor_lift_once_per_step": 256230721536,
+        "basis_refresh_amortized": 32213946496.0,
+        "two_control_gradient_diagnostics": 11960056320,
+        "main_sgd": 7972142080,
+        "proxy_and_coefficient_sgd": 57420800
+      },
+      "one_basis_refresh_flops": 1030846287872,
+      "counted_flops": 25746183469696.0,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.2583106201907605,
+      "reference_over_candidate": 3.8713081144766996,
+      "residual_variance_ratio_break_even": 0.9571027048255666,
+      "variance_cost_score": {
+        "0": 0.2583106201907605,
+        "0.1": 0.33580380624798867,
+        "0.25": 0.4520435853338309,
+        "0.5": 0.6457765504769013,
+        "0.9": 0.9557492947058139,
+        "1": 1.033242480763042
+      }
+    },
+    {
+      "microbatches": 8,
+      "controls": 2,
+      "rank": 64,
+      "refresh_every_steps": 32,
+      "main_checkpoint": false,
+      "proxy_parameters": 13899264,
+      "coefficient_parameters": 59047936,
+      "basis_entries": 136495168,
+      "linear_parameters": 3985246720,
+      "components": {
+        "main_full_forward_backward": 24915859210240,
+        "proxy_forward_backward_all_microbatches": 381291593728,
+        "coefficient_forward": 944766976,
+        "coefficient_backward_controls": 472383488,
+        "true_gradient_projection_controls": 281429540864,
+        "factor_lift_once_per_step": 514811305984,
+        "basis_refresh_amortized": 65327768064.0,
+        "two_control_gradient_diagnostics": 11965585920,
+        "main_sgd": 7972142080,
+        "proxy_and_coefficient_sgd": 145894400
+      },
+      "one_basis_refresh_flops": 2090488578048,
+      "counted_flops": 26180220191744.0,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.26266529648636555,
+      "reference_over_candidate": 3.8071264585647615,
+      "residual_variance_ratio_break_even": 0.9357088195215871,
+      "variance_cost_score": {
+        "0": 0.26266529648636555,
+        "0.1": 0.3414648854322752,
+        "0.25": 0.4596642688511397,
+        "0.5": 0.6566632412159139,
+        "0.9": 0.9718615969995525,
+        "1": 1.0506611859454622
+      }
+    },
+    {
+      "microbatches": 16,
+      "controls": 2,
+      "rank": 32,
+      "refresh_every_steps": 32,
+      "main_checkpoint": false,
+      "proxy_parameters": 13899264,
+      "coefficient_parameters": 14811136,
+      "basis_entries": 68247584,
+      "linear_parameters": 3985246720,
+      "components": {
+        "main_full_forward_backward": 24915859210240,
+        "proxy_forward_backward_all_microbatches": 762583187456,
+        "coefficient_forward": 473956352,
+        "coefficient_backward_controls": 118489088,
+        "true_gradient_projection_controls": 140242911232,
+        "factor_lift_once_per_step": 256230721536,
+        "basis_refresh_amortized": 32213946496.0,
+        "two_control_gradient_diagnostics": 11960056320,
+        "main_sgd": 7972142080,
+        "proxy_and_coefficient_sgd": 57420800
+      },
+      "one_basis_refresh_flops": 1030846287872,
+      "counted_flops": 26127712041600.0,
+      "reference_counted_flops": 199334845824000,
+      "flop_ratio": 0.1310744839096979,
+      "reference_over_candidate": 7.629249951416458,
+      "residual_variance_ratio_break_even": 0.9470357073452084,
+      "variance_cost_score": {
+        "0": 0.1310744839096979,
+        "0.1": 0.22282662264648645,
+        "0.25": 0.3604548307516692,
+        "0.5": 0.5898351775936406,
+        "0.9": 0.9568437325407946,
+        "1": 1.0485958712775831
+      }
+    },
+    {
+      "microbatches": 8,
+      "controls": 4,
+      "rank": 32,
+      "refresh_every_steps": 32,
+      "main_checkpoint": false,
+      "proxy_parameters": 13899264,
+      "coefficient_parameters": 14811136,
+      "basis_entries": 68247584,
+      "linear_parameters": 3985246720,
+      "components": {
+        "main_full_forward_backward": 49831718420480,
+        "proxy_forward_backward_all_microbatches": 381291593728,
+        "coefficient_forward": 236978176,
+        "coefficient_backward_controls": 236978176,
+        "true_gradient_projection_controls": 280485822464,
+        "factor_lift_once_per_step": 256230721536,
+        "basis_refresh_amortized": 32213946496.0,
+        "two_control_gradient_diagnostics": 11960056320,
+        "main_sgd": 7972142080,
+        "proxy_and_coefficient_sgd": 57420800
+      },
+      "one_basis_refresh_flops": 1030846287872,
+      "counted_flops": 50802404080256.0,
+      "reference_counted_flops": 99671408983040,
+      "flop_ratio": 0.509698865488101,
+      "reference_over_candidate": 1.961942762109886,
+      "residual_variance_ratio_break_even": 0.9619427621098859,
+      "variance_cost_score": {
+        "0": 0.509698865488101,
+        "0.1": 0.5606687520369111,
+        "0.25": 0.6371235818601262,
+        "0.5": 0.7645482982321514,
+        "0.9": 0.9684278444273917,
+        "1": 1.019397730976202
+      }
+    }
+  ],
+  "proxy_correction_checkpointed": {
+    "microbatches": 8,
+    "controls": 2,
+    "rank": 32,
+    "refresh_every_steps": 32,
+    "main_checkpoint": true,
+    "proxy_parameters": 13899264,
+    "coefficient_parameters": 14811136,
+    "basis_entries": 68247584,
+    "linear_parameters": 3985246720,
+    "components": {
+      "main_full_forward_backward": 33162364190720,
+      "proxy_forward_backward_all_microbatches": 381291593728,
+      "coefficient_forward": 236978176,
+      "coefficient_backward_controls": 118489088,
+      "true_gradient_projection_controls": 140242911232,
+      "factor_lift_once_per_step": 256230721536,
+      "basis_refresh_amortized": 32213946496.0,
+      "two_control_gradient_diagnostics": 11960056320,
+      "main_sgd": 7972142080,
+      "proxy_and_coefficient_sgd": 57420800
+    },
+    "one_basis_refresh_flops": 1030846287872,
+    "counted_flops": 33992688450176.0,
+    "reference_counted_flops": 132657428904960,
+    "flop_ratio": 0.25624413748082997,
+    "reference_over_candidate": 3.9025283069151646,
+    "residual_variance_ratio_break_even": 0.9675094356383882,
+    "variance_cost_score": {
+      "0": 0.25624413748082997,
+      "0.1": 0.33311737872507896,
+      "0.25": 0.44842724059145245,
+      "0.5": 0.6406103437020749,
+      "0.9": 0.9481033086790709,
+      "1": 1.0249765499233199
+    }
+  },
+  "multirate": [
+    {
+      "bytes": 512,
+      "patch_bytes": 4,
+      "global_positions": 128,
+      "global_checkpoint": false,
+      "parameters": 3995575808,
+      "components": {
+        "global": 3073711800320,
+        "encoder": 5822873600,
+        "decoder": 22518956032,
+        "bridges": 1912602624,
+        "pooling_and_broadcast": 786432
+      },
+      "counted_flops": 3103967019008,
+      "counted_flops_per_byte": 6062435584.0
+    },
+    {
+      "bytes": 512,
+      "patch_bytes": 8,
+      "global_positions": 64,
+      "global_checkpoint": false,
+      "parameters": 3995575808,
+      "components": {
+        "global": 1533500456960,
+        "encoder": 5822873600,
+        "decoder": 22518956032,
+        "bridges": 1157627904,
+        "pooling_and_broadcast": 786432
+      },
+      "counted_flops": 1563000700928,
+      "counted_flops_per_byte": 3052735744.0
+    },
+    {
+      "bytes": 512,
+      "patch_bytes": 16,
+      "global_positions": 32,
+      "global_checkpoint": false,
+      "parameters": 3995575808,
+      "components": {
+        "global": 765911367680,
+        "encoder": 5822873600,
+        "decoder": 22518956032,
+        "bridges": 780140544,
+        "pooling_and_broadcast": 786432
+      },
+      "counted_flops": 795034124288,
+      "counted_flops_per_byte": 1552801024.0
+    }
+  ],
+  "bpe_comparison_assumption": {
+    "average_bytes_per_token": 4,
+    "parameters": 3995240960,
+    "counted_flops_per_byte": 5893242880.0
+  },
+  "algebra": {
+    "scope": "고정 행렬 항등식·제어 부분집합 전수 열거·patch 입력 의존 순서",
+    "control_subsets": 28,
+    "factorization_max_abs_error": 8.881784197001252e-15,
+    "factorized_estimator_mean_error": 1.3322676295501878e-15,
+    "projected_target_max_abs_error": 2.6645352591003757e-15,
+    "proxy_estimator_mean_error": 8.881784197001252e-16,
+    "centered_variance_decomposition_abs_error": 0.0,
+    "causal_dependency_cases": 268
+  }
+}

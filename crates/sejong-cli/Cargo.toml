@@ -9,6 +9,7 @@ description = "Sejong command-line entry point."
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.7", features = ["derive"] }
+blake3 = "1"
 sejong-core.workspace = true
 sejong-runtime.workspace = true
 sejong-train.workspace = true

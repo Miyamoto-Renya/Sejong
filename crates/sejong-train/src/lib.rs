@@ -1,4 +1,5 @@
 //! Memory-mapped byte corpora, AdamW and resumable Transformer training.
+pub mod control_variate;
 pub mod memory;
 pub mod native;
 pub mod roles;
@@ -253,12 +254,33 @@ pub struct TrainingSummary {
     pub last_loss: f64,
     pub model_directory: PathBuf,
 }
+
+fn save_execution_metrics(engine: &Engine, output: &Path, elapsed_seconds: f64) -> Result<()> {
+    let counters = engine.execution_counters();
+    let metrics = json::json!({
+        "elapsed_seconds":elapsed_seconds,
+        "scope":"initialization_training_basis_refresh_checkpoint_flush_and_save",
+        "logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,
+        "launches":counters.launches,"gemm_launches":counters.gemm_launches,
+        "attention_launches":counters.attention_launches,"compilations":counters.compilations,
+        "compile_seconds":counters.compile_seconds
+    });
+    std::fs::write(
+        output.join("execution.json"),
+        json::to_vec_pretty(&metrics)?,
+    )?;
+    Ok(())
+}
 pub fn train(
     config: &Config,
     data: &Path,
     output: &Path,
     resume: Option<&Path>,
 ) -> Result<TrainingSummary> {
+    if config.training.optimizer != sejong_core::OptimizerKind::Adamw {
+        return control_variate::train(config, data, output, resume);
+    }
+    let complete_started = Instant::now();
     config.model.validate()?;
     config.training.validate(&config.model)?;
     ensure(
@@ -325,6 +347,9 @@ pub fn train(
     let mut last_loss = 0.;
     let tc = &config.training;
     while optimizer.step < tc.steps {
+        engine.synchronize()?;
+        let counters_before = engine.execution_counters();
+        let step_started = Instant::now();
         let mut loss = 0.;
         for _ in 0..tc.accumulation {
             let (input, target) = corpus.batch(&mut rng, tc.batch, tc.sequence)?;
@@ -351,13 +376,25 @@ pub fn train(
         let lr = tc.lr(optimizer.step);
         let norm = optimizer.update(&mut engine, &model.parameters, tc, lr)?;
         last_loss = loss;
+        engine.synchronize()?;
+        let step_seconds = step_started.elapsed().as_secs_f64();
+        let counters = engine.execution_counters().difference(&counters_before);
+        let record = json::json!({
+            "step":optimizer.step,"optimizer":"adamw","loss":loss,"gradient_norm":norm,"learning_rate":lr,
+            "step_seconds":step_seconds,"observed_bytes":tc.accumulation*tc.batch*tc.sequence,
+            "exact_bytes":tc.accumulation*tc.batch*tc.sequence,"elapsed_seconds":start.elapsed().as_secs_f64(),
+            "peak_gpu_mib":engine.peak_bytes()/1048576,"counters":{
+                "logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,"launches":counters.launches,
+                "compilations":counters.compilations,"compile_seconds":counters.compile_seconds,
+                "gemm_launches":counters.gemm_launches,"attention_launches":counters.attention_launches
+            }
+        });
+        writeln!(log, "{record}")?;
+        log.flush()?;
         if optimizer.step == 1
             || optimizer.step.is_multiple_of(tc.log_every)
             || optimizer.step == tc.steps
         {
-            let record = json::json!({"step":optimizer.step,"loss":loss,"gradient_norm":norm,"learning_rate":lr,"elapsed_seconds":start.elapsed().as_secs_f64(),"peak_gpu_mib":engine.peak_bytes()/1048576});
-            writeln!(log, "{record}")?;
-            log.flush()?;
             eprintln!("{record}");
         }
         if tc.checkpoint_every > 0
@@ -388,6 +425,7 @@ pub fn train(
         &corpus.fingerprint,
         &rng,
     )?;
+    save_execution_metrics(&engine, output, complete_started.elapsed().as_secs_f64())?;
     Ok(TrainingSummary {
         steps: optimizer.step,
         last_loss,

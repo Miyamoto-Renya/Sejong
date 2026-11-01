@@ -5,6 +5,7 @@ use sejong_gpu::Engine;
 use sejong_model::Model;
 use sejong_runtime::{Sampling, TextStream};
 use std::path::PathBuf;
+mod benchmark;
 
 #[derive(Parser)]
 #[command(
@@ -18,6 +19,25 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Commands {
+    /// Measure real training, held-out loss and cached inference for explicit configurations.
+    Benchmark {
+        #[arg(long, required = true)]
+        config: Vec<PathBuf>,
+        #[arg(long)]
+        data: PathBuf,
+        #[arg(long)]
+        validation: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        warmup_steps: usize,
+        #[arg(long)]
+        measure_steps: usize,
+        #[arg(long)]
+        evaluation_batches: usize,
+        #[arg(long)]
+        decode_bytes: usize,
+    },
     /// Assemble prepared independent originals into one native composite.
     Connect {
         #[arg(long)]
@@ -144,6 +164,27 @@ enum Commands {
 }
 fn main() -> Result<()> {
     match Cli::parse().command {
+        Commands::Benchmark {
+            config,
+            data,
+            validation,
+            out,
+            warmup_steps,
+            measure_steps,
+            evaluation_batches,
+            decode_bytes,
+        } => {
+            benchmark::run(benchmark::Request {
+                configs: config,
+                data,
+                validation,
+                out,
+                warmup_steps,
+                measure_steps,
+                evaluation_batches,
+                decode_bytes,
+            })?;
+        }
         Commands::Connect { spec, out } => {
             let input: sejong_core::native::Assembly = json::from_slice(&std::fs::read(&spec)?)?;
             let mut e = Engine::new(GpuConfig::default())?;

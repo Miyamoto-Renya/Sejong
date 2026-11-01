@@ -17,6 +17,8 @@ def compile_request(request):
     operation=request['operation']
     if operation.startswith('parser_'):
         module=importlib.import_module('sejong_kernels.ops.parser')
+    elif operation.startswith('hierarchy_'):
+        module=importlib.import_module('sejong_kernels.ops.hierarchy')
     elif hasattr(common,operation): module=common
     else: module=kernels
     source_digest = hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
@@ -27,7 +29,7 @@ def compile_request(request):
     if manifest.exists():
         result = json.loads(manifest.read_text())
         if Path(result['binary']).exists():
-            return result
+            return {**result, 'cache_hit': True}
     fn = getattr(module, request['operation'])
     compiled = triton.compile(
         ASTSource(fn, signature=request['signature'], constexprs=request.get('constants', {})),
@@ -47,7 +49,7 @@ def compile_request(request):
     temp = directory / f'kernel.{os.getpid()}.tmp'
     temp.write_text(json.dumps(result, sort_keys=True))
     temp.replace(manifest)
-    return result
+    return {**result, 'cache_hit': False}
 
 
 def main():

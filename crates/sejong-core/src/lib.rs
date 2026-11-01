@@ -70,6 +70,39 @@ pub struct ModelConfig {
     pub norm_epsilon: f32,
     pub precision: DType,
     pub seed: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hierarchy: Option<HierarchyConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kv_heads: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub experts: Option<ExpertConfig>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HierarchyConfig {
+    pub patch_size: usize,
+    pub encoder_width: usize,
+    pub encoder_layers: usize,
+    pub encoder_heads: usize,
+    pub encoder_ffn_width: usize,
+    pub decoder_width: usize,
+    pub decoder_layers: usize,
+    pub decoder_heads: usize,
+    pub decoder_ffn_width: usize,
+    pub local_window: usize,
+    #[serde(default)]
+    pub checkpoint_encoder: bool,
+    #[serde(default)]
+    pub checkpoint_decoder: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExpertConfig {
+    pub count: usize,
+    pub top_k: usize,
+    pub ffn_width: usize,
 }
 impl Default for ModelConfig {
     fn default() -> Self {
@@ -84,6 +117,9 @@ impl Default for ModelConfig {
             norm_epsilon: f32::EPSILON,
             precision: DType::F16,
             seed: 42,
+            hierarchy: None,
+            kv_heads: None,
+            experts: None,
         }
     }
 }
@@ -112,7 +148,158 @@ impl ModelConfig {
                 && self.rope_theta.is_finite()
                 && self.rope_theta > 0.0,
             "norm_epsilon and rope_theta must be finite and positive",
-        )
+        )?;
+        let kv = self.kv_heads.unwrap_or(self.heads);
+        ensure(
+            kv > 0 && self.heads.is_multiple_of(kv),
+            "kv_heads must divide heads",
+        )?;
+        if let Some(e) = &self.experts {
+            ensure(
+                e.count > 0 && e.top_k > 0 && e.top_k <= e.count && e.ffn_width > 0,
+                "expert count/width must be positive and top_k must be in 1..=count",
+            )?;
+        }
+        if let Some(h) = &self.hierarchy {
+            ensure(
+                h.patch_size > 0 && h.patch_size <= self.context && h.local_window > 0,
+                "patch_size must be in 1..=context and local_window must be positive",
+            )?;
+            for (width, layers, heads, ffn) in [
+                (
+                    h.encoder_width,
+                    h.encoder_layers,
+                    h.encoder_heads,
+                    h.encoder_ffn_width,
+                ),
+                (
+                    h.decoder_width,
+                    h.decoder_layers,
+                    h.decoder_heads,
+                    h.decoder_ffn_width,
+                ),
+            ] {
+                ensure(
+                    width > 0
+                        && layers > 0
+                        && heads > 0
+                        && ffn > 0
+                        && width.is_multiple_of(heads)
+                        && (width / heads).is_multiple_of(2),
+                    "hierarchy stages require positive dimensions and an even head width",
+                )?;
+            }
+        }
+        self.parameter_tensor_groups()?
+            .iter()
+            .try_fold(0usize, |total, (elements, count)| {
+                elements
+                    .checked_mul(*count)
+                    .and_then(|n| total.checked_add(n))
+                    .ok_or_else(|| {
+                        Error::Message("model parameter count exceeds addressable range".into())
+                    })
+            })?;
+        Ok(())
+    }
+    /// 같은 원소 수의 파라미터 텐서를 묶어 초기화 전 저장 용량을 계산한다.
+    pub fn parameter_tensor_groups(&self) -> Result<Vec<(usize, usize)>> {
+        fn matrix(
+            groups: &mut Vec<(usize, usize)>,
+            a: usize,
+            b: usize,
+            count: usize,
+        ) -> Result<()> {
+            let elements = a
+                .checked_mul(b)
+                .ok_or_else(|| Error::Message("model tensor shape overflow".into()))?;
+            ensure(
+                elements > 0 && elements <= i32::MAX as usize && count > 0,
+                "model parameter tensors require 1..=i32::MAX elements",
+            )?;
+            groups.push((elements, count));
+            Ok(())
+        }
+        fn repeated(layers: usize, count: usize) -> Result<usize> {
+            layers
+                .checked_mul(count)
+                .ok_or_else(|| Error::Message("model tensor count overflow".into()))
+        }
+        fn stage(
+            groups: &mut Vec<(usize, usize)>,
+            width: usize,
+            layers: usize,
+            heads: usize,
+            kv_heads: usize,
+            ffn: usize,
+            experts: Option<&ExpertConfig>,
+        ) -> Result<()> {
+            ensure(
+                heads > 0
+                    && kv_heads > 0
+                    && width.is_multiple_of(heads)
+                    && heads.is_multiple_of(kv_heads),
+                "stage head dimensions mismatch",
+            )?;
+            let kv = width / heads * kv_heads;
+            matrix(groups, width, 1, repeated(layers, 2)?)?;
+            matrix(groups, width, width, repeated(layers, 2)?)?;
+            matrix(groups, width, kv, repeated(layers, 2)?)?;
+            if let Some(e) = experts {
+                matrix(
+                    groups,
+                    width,
+                    e.ffn_width,
+                    repeated(repeated(layers, e.count)?, 3)?,
+                )?;
+                matrix(groups, width, e.count, layers)?;
+            } else {
+                matrix(groups, width, ffn, repeated(layers, 3)?)?;
+            }
+            Ok(())
+        }
+        let mut groups = Vec::new();
+        stage(
+            &mut groups,
+            self.width,
+            self.layers,
+            self.heads,
+            self.kv_heads.unwrap_or(self.heads),
+            self.ffn_width,
+            self.experts.as_ref(),
+        )?;
+        matrix(&mut groups, self.width, 1, 1)?;
+        matrix(&mut groups, self.width, VOCAB, 1)?;
+        if let Some(h) = &self.hierarchy {
+            stage(
+                &mut groups,
+                h.encoder_width,
+                h.encoder_layers,
+                h.encoder_heads,
+                h.encoder_heads,
+                h.encoder_ffn_width,
+                None,
+            )?;
+            stage(
+                &mut groups,
+                h.decoder_width,
+                h.decoder_layers,
+                h.decoder_heads,
+                h.decoder_heads,
+                h.decoder_ffn_width,
+                None,
+            )?;
+            matrix(&mut groups, VOCAB, h.encoder_width, 1)?;
+            matrix(&mut groups, h.encoder_width, 1, 1)?;
+            matrix(&mut groups, h.decoder_width, 1, 1)?;
+            matrix(&mut groups, self.width, 1, 2)?;
+            matrix(&mut groups, self.width, h.encoder_width, 2)?;
+            matrix(&mut groups, self.width, h.decoder_width, 2)?;
+            matrix(&mut groups, h.encoder_width, h.decoder_width, 1)?;
+        } else {
+            matrix(&mut groups, VOCAB, self.width, 1)?;
+        }
+        Ok(groups)
     }
 }
 pub const VOCAB: usize = 257;
@@ -121,6 +308,9 @@ pub const EOS: i32 = 256;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TrainConfig {
+    pub optimizer: OptimizerKind,
+    pub control_variate: Option<ControlVariateConfig>,
+    pub gradient_diagnostics_every: usize,
     pub activation_checkpointing: bool,
     pub steps: usize,
     pub sequence: usize,
@@ -143,6 +333,9 @@ pub struct TrainConfig {
 impl Default for TrainConfig {
     fn default() -> Self {
         Self {
+            optimizer: OptimizerKind::Adamw,
+            control_variate: None,
+            gradient_diagnostics_every: 0,
             activation_checkpointing: true,
             steps: 10000,
             sequence: 512,
@@ -175,6 +368,23 @@ impl TrainConfig {
             "training requires positive steps/batch/accumulation and sequence within context",
         )?;
         ensure(self.log_every > 0, "log_every must be positive")?;
+        if self.optimizer == OptimizerKind::ControlVariateSgd {
+            if let Some(hierarchy) = &model.hierarchy {
+                ensure(
+                    self.sequence > hierarchy.patch_size,
+                    "control-variate training sequence must exceed patch_size to observe global gradients",
+                )?;
+            }
+            self.control_variate
+                .as_ref()
+                .ok_or_else(|| {
+                    Error::Message(
+                        "control_variate_sgd requires an explicit training.control_variate budget"
+                            .into(),
+                    )
+                })?
+                .validate(self.accumulation)?;
+        }
         ensure(
             self.learning_rate.is_finite()
                 && self.learning_rate > 0.0
@@ -209,6 +419,56 @@ impl TrainConfig {
                     * (self.learning_rate - self.min_learning_rate)
                     * (1.0 + (std::f32::consts::PI * phase).cos())
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OptimizerKind {
+    Adamw,
+    Sgd,
+    ControlVariateSgd,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlSampling {
+    Uniform,
+    Stratified,
+}
+
+/// 제어 배치와 저랭크 예측기의 학습 예산을 지정한다.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ControlVariateConfig {
+    pub controls: usize,
+    pub rank: usize,
+    pub sampling: ControlSampling,
+    pub strata: usize,
+    pub basis_refresh: usize,
+    pub predictor_learning_rate: f32,
+}
+impl ControlVariateConfig {
+    pub fn validate(&self, observations: usize) -> Result<()> {
+        ensure(
+            self.controls > 0 && self.controls <= observations,
+            "control_variate.controls must be in 1..=accumulation",
+        )?;
+        ensure(
+            self.rank > 0 && self.basis_refresh > 0,
+            "control_variate.rank and basis_refresh must be positive",
+        )?;
+        ensure(
+            self.predictor_learning_rate.is_finite() && self.predictor_learning_rate > 0.,
+            "control_variate.predictor_learning_rate must be finite and positive",
+        )?;
+        if self.sampling == ControlSampling::Stratified {
+            ensure(
+                self.strata > 0 && self.strata <= self.controls && self.strata <= observations,
+                "stratified sampling requires 1 <= strata <= controls <= accumulation",
+            )?;
+        }
+        Ok(())
     }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]

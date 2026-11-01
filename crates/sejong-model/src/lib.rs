@@ -1,6 +1,7 @@
+mod architecture;
 pub mod native;
 // Independent byte Transformers, named weights and atomic model artifacts.
-use sejong_core::{DType, EOS, Error, Manifest, ModelConfig, Result, Rng, VOCAB, ensure, json};
+use sejong_core::{DType, EOS, Error, Manifest, ModelConfig, Result, Rng, ensure, json};
 use sejong_gpu::{
     Engine, Tensor,
     graph::{Graph, Var},
@@ -23,52 +24,95 @@ pub struct Model {
 pub struct Binding {
     pub leaves: Vec<Var>,
     pub compute: Vec<Var>,
+    corrections: Vec<Option<LowRankCorrection>>,
+}
+#[derive(Clone)]
+pub struct LowRankCorrection {
+    pub parameter_index: usize,
+    pub left: Tensor,
+    pub coefficient: Tensor,
+    pub right: Tensor,
 }
 pub struct Cache {
     pub keys: Vec<Tensor>,
     pub values: Vec<Tensor>,
     pub length: usize,
     pub capacity: usize,
+    hierarchy: Option<architecture::HierarchyCache>,
+}
+impl Cache {
+    pub fn reset(&mut self) {
+        self.length = 0;
+        if let Some(state) = &mut self.hierarchy {
+            state.reset();
+        }
+    }
 }
 
 fn layout(c: &ModelConfig) -> Vec<(String, Vec<usize>, bool)> {
-    let d = c.width;
-    let f = c.ffn_width;
-    let mut out = vec![("embedding".into(), vec![VOCAB, d], false)];
-    for i in 0..c.layers {
-        for name in ["attention_norm", "ffn_norm"] {
-            out.push((format!("layers.{i}.{name}"), vec![d], true));
-        }
-        for name in ["query", "key", "value", "attention_output"] {
-            out.push((format!("layers.{i}.{name}"), vec![d, d], false));
-        }
-        for name in ["gate", "up"] {
-            out.push((format!("layers.{i}.{name}"), vec![d, f], false));
-        }
-        out.push((format!("layers.{i}.down"), vec![f, d], false));
-    }
-    out.push(("final_norm".into(), vec![d], true));
-    out.push(("output".into(), vec![d, VOCAB], false));
-    out
+    architecture::layout(c)
 }
 impl Model {
     pub fn initialize(engine: &mut Engine, config: ModelConfig) -> Result<Self> {
         config.validate()?;
+        let required = config.parameter_tensor_groups()?.into_iter().try_fold(
+            0usize,
+            |total, (elements, count)| {
+                let bytes = elements
+                    .checked_mul(DType::F32.bytes())
+                    .ok_or_else(|| Error::Message("model parameter byte size overflow".into()))?;
+                Engine::allocation_bytes(bytes)?
+                    .checked_mul(count)
+                    .and_then(|n| total.checked_add(n))
+                    .ok_or_else(|| {
+                        Error::Message("model parameter allocation size overflow".into())
+                    })
+            },
+        )?;
+        let available = engine.available_memory_bytes()?;
+        if required > available {
+            return Err(Error::Capacity {
+                operation: "model initialization".into(),
+                required,
+                available,
+            });
+        }
         let mut rng = Rng::new(config.seed);
         let mut parameters = vec![];
         for (name, shape, norm) in layout(&config) {
             let std = if name == "embedding" {
-                1.0 / (config.width as f32).sqrt()
+                1.0 / (shape[1] as f32).sqrt()
             } else {
                 1.0 / (shape[0] as f32).sqrt()
             };
+            let depth = config.hierarchy.as_ref().map_or(config.layers, |h| {
+                if name.starts_with("encoder.") {
+                    h.encoder_layers
+                } else if name.starts_with("decoder.") {
+                    h.decoder_layers
+                } else {
+                    config.layers
+                }
+            });
             let std = if name.ends_with(".down") || name.ends_with(".attention_output") {
-                std / (2. * config.layers as f32).sqrt()
+                std / (2. * depth as f32).sqrt()
             } else {
                 std
             };
-            let data: Vec<f32> = (0..shape.iter().product())
-                .map(|_| if norm { 1. } else { rng.normal() * std })
+            let elements = shape
+                .iter()
+                .try_fold(1usize, |count, dimension| count.checked_mul(*dimension))
+                .ok_or_else(|| Error::Message("model tensor shape overflow".into()))?;
+            let data: Vec<f32> = (0..elements)
+                .map(|_| {
+                    if norm {
+                        1.
+                    } else if name == "global_bos" {
+                        0.
+                    } else {
+                        rng.normal() * std
+                    }
+                })
                 .collect();
             parameters.push(Parameter {
                 name,
@@ -131,6 +175,40 @@ impl Model {
         &self.parameters[self.index[name]].value
     }
     pub fn bind(&self, g: &mut Graph, trainable: bool) -> Result<Binding> {
+        self.bind_with_corrections(g, trainable, &[])
+    }
+    pub fn is_encoder_parameter(&self, index: usize) -> bool {
+        let name = &self.parameters[index].name;
+        name == "embedding"
+            || name.starts_with("encoder.")
+            || name == "encoder_norm"
+            || name == "input_projection"
+    }
+    pub fn bind_encoder(&self, g: &mut Graph, trainable: bool) -> Result<Binding> {
+        let mut leaves = Vec::with_capacity(self.parameters.len());
+        let mut compute = Vec::with_capacity(self.parameters.len());
+        for (i, p) in self.parameters.iter().enumerate() {
+            let selected = self.is_encoder_parameter(i);
+            let leaf = g.leaf(p.value.clone(), trainable && selected);
+            leaves.push(leaf);
+            compute.push(if selected {
+                g.cast(leaf, self.config.precision)?
+            } else {
+                leaf
+            });
+        }
+        Ok(Binding {
+            leaves,
+            compute,
+            corrections: vec![None; self.parameters.len()],
+        })
+    }
+    pub fn bind_with_corrections(
+        &self,
+        g: &mut Graph,
+        trainable: bool,
+        corrections: &[LowRankCorrection],
+    ) -> Result<Binding> {
         let mut leaves = vec![];
         let mut compute = vec![];
         for p in &self.parameters {
@@ -139,7 +217,36 @@ impl Model {
             leaves.push(leaf);
             compute.push(cast);
         }
-        Ok(Binding { leaves, compute })
+        let mut bound = vec![None; self.parameters.len()];
+        for correction in corrections {
+            ensure(
+                correction.parameter_index < self.parameters.len(),
+                "correction parameter index exceeds model",
+            )?;
+            let shape = &self.parameters[correction.parameter_index].value.shape;
+            ensure(
+                shape.len() == 2
+                    && correction.left.shape.len() == 2
+                    && correction.right.shape.len() == 2
+                    && correction.coefficient.shape.len() == 2,
+                "low-rank correction requires matrices",
+            )?;
+            let r = correction.left.shape[1];
+            ensure(
+                r > 0
+                    && correction.left.shape[0] == shape[0]
+                    && correction.right.shape == [shape[1], r]
+                    && correction.coefficient.shape == [r, r]
+                    && bound[correction.parameter_index].is_none(),
+                "low-rank correction shape or duplicate parameter mismatch",
+            )?;
+            bound[correction.parameter_index] = Some(correction.clone());
+        }
+        Ok(Binding {
+            leaves,
+            compute,
+            corrections: bound,
+        })
     }
     fn w(&self, b: &Binding, name: &str) -> Var {
         b.compute[self.index[name]]
@@ -156,6 +263,10 @@ impl Model {
             sequence > 0 && sequence <= self.config.context && ids.len().is_multiple_of(sequence),
             "input sequence exceeds context or has partial batch",
         )?;
+        if self.config.hierarchy.is_some() {
+            let encoded = self.encode(g, b, ids, sequence, injection)?;
+            return self.hidden_from_encoded(g, b, encoded, sequence);
+        }
         let c = &self.config;
         let mut x = g.embedding(self.w(b, "embedding"), ids, c.precision)?;
         if let Some(input) = injection {
@@ -163,49 +274,69 @@ impl Model {
         }
         self.hidden_from(g, b, x, sequence)
     }
-    pub fn hidden_from(
+    pub fn hidden_from(&self, g: &mut Graph, b: &Binding, x: Var, sequence: usize) -> Result<Var> {
+        ensure(
+            sequence > 0
+                && sequence <= self.config.context
+                && g.tensor(x).shape.len() == 2
+                && g.tensor(x).shape[0].is_multiple_of(sequence)
+                && g.tensor(x).shape[1] == self.config.width,
+            "embedded input shape/context mismatch",
+        )?;
+        architecture::hidden_from(self, g, b, x, sequence)
+    }
+    pub fn encoder_width(&self) -> usize {
+        self.config
+            .hierarchy
+            .as_ref()
+            .map_or(self.config.width, |h| h.encoder_width)
+    }
+    pub fn encode(
         &self,
         g: &mut Graph,
         b: &Binding,
-        mut x: Var,
+        ids: &Tensor,
+        sequence: usize,
+        injection: Option<Var>,
+    ) -> Result<Var> {
+        ensure(
+            sequence > 0 && sequence <= self.config.context && ids.len().is_multiple_of(sequence),
+            "encoder sequence/context mismatch",
+        )?;
+        architecture::encode(self, g, b, ids, sequence, injection)
+    }
+    pub fn hidden_from_encoded(
+        &self,
+        g: &mut Graph,
+        b: &Binding,
+        encoded: Var,
         sequence: usize,
     ) -> Result<Var> {
         ensure(
             sequence > 0
                 && sequence <= self.config.context
-                && g.tensor(x).shape[0].is_multiple_of(sequence)
-                && g.tensor(x).shape[1] == self.config.width,
-            "embedded input shape/context mismatch",
+                && g.tensor(encoded).shape.len() == 2
+                && g.tensor(encoded).shape[0].is_multiple_of(sequence)
+                && g.tensor(encoded).shape[1] == self.encoder_width(),
+            "encoded input shape/context mismatch",
         )?;
-        let c = &self.config;
-        for layer in 0..c.layers {
-            let key = |name: &str| format!("layers.{layer}.{name}");
-            let mut inputs = vec![x];
-            for name in [
-                "attention_norm",
-                "query",
-                "key",
-                "value",
-                "attention_output",
-                "ffn_norm",
-                "gate",
-                "up",
-                "down",
-            ] {
-                inputs.push(self.w(b, &key(name)));
-            }
-            let (heads, theta, eps) = (c.heads, c.rope_theta, c.norm_epsilon);
-            x = g.checkpoint(&inputs, move |g, v| {
-                transformer_block(g, v, sequence, heads, theta, eps)
-            })?;
-        }
-        g.norm(x, self.w(b, "final_norm"), c.norm_epsilon)
+        architecture::hidden_from_encoded(self, g, b, encoded, sequence)
+    }
+    pub fn logits_from_encoded(
+        &self,
+        g: &mut Graph,
+        b: &Binding,
+        encoded: Var,
+        sequence: usize,
+    ) -> Result<Var> {
+        let h = self.hidden_from_encoded(g, b, encoded, sequence)?;
+        let h = g.cast(h, DType::F32)?;
+        architecture::output(self, g, b, h)
     }
     pub fn logits(&self, g: &mut Graph, b: &Binding, ids: &Tensor, sequence: usize) -> Result<Var> {
         let h = self.hidden(g, b, ids, sequence, None)?;
         let h = g.cast(h, DType::F32)?;
-        let output = b.leaves[self.index["output"]];
-        g.matmul(h, output)
+        architecture::output(self, g, b, h)
     }
     pub fn inference_weights(&self, engine: &mut Engine) -> Result<HashMap<String, Tensor>> {
         self.parameters
@@ -226,24 +357,7 @@ impl Model {
             .collect()
     }
     pub fn new_cache(&self, engine: &mut Engine) -> Result<Cache> {
-        let mut keys = vec![];
-        let mut values = vec![];
-        for _ in 0..self.config.layers {
-            keys.push(engine.empty(
-                &[self.config.context, self.config.width],
-                self.config.precision,
-            )?);
-            values.push(engine.empty(
-                &[self.config.context, self.config.width],
-                self.config.precision,
-            )?);
-        }
-        Ok(Cache {
-            keys,
-            values,
-            length: 0,
-            capacity: self.config.context,
-        })
+        architecture::new_cache(self, engine)
     }
     pub fn forward_cached(
         &self,
@@ -272,47 +386,12 @@ impl Model {
             cache.length + tokens.len() <= cache.capacity,
             "KV cache context limit reached",
         )?;
-        let c = &self.config;
-        let ids = engine.from_i32(&[tokens.len()], tokens)?;
-        let mut x = engine.embedding(&weights["embedding"], &ids, c.precision)?;
-        if let Some(input) = injection {
-            x = engine.add(&x, input, 1., c.precision)?;
+        if cache.length == 0 {
+            cache.reset();
         }
-        for layer in 0..c.layers {
-            let w = |name: &str| &weights[&format!("layers.{layer}.{name}")];
-            let z = engine.norm(&x, w("attention_norm"), c.norm_epsilon)?;
-            let q = engine.matmul(&z, w("query"), false, false, c.precision)?;
-            let k = engine.matmul(&z, w("key"), false, false, c.precision)?;
-            let v = engine.matmul(&z, w("value"), false, false, c.precision)?;
-            let q = engine.rope(&q, tokens.len(), cache.length, c.heads, c.rope_theta, false)?;
-            let k = engine.rope(&k, tokens.len(), cache.length, c.heads, c.rope_theta, false)?;
-            engine.copy_into(&k, &cache.keys[layer].rows(cache.length, tokens.len())?)?;
-            engine.copy_into(&v, &cache.values[layer].rows(cache.length, tokens.len())?)?;
-            let all_k = cache.keys[layer].rows(0, cache.length + tokens.len())?;
-            let all_v = cache.values[layer].rows(0, cache.length + tokens.len())?;
-            let (attn, _) = engine.attention(
-                &q,
-                &all_k,
-                &all_v,
-                tokens.len(),
-                cache.length + tokens.len(),
-                cache.length,
-                c.heads,
-            )?;
-            let projected =
-                engine.matmul(&attn, w("attention_output"), false, false, c.precision)?;
-            x = engine.add(&x, &projected, 1., c.precision)?;
-            let z = engine.norm(&x, w("ffn_norm"), c.norm_epsilon)?;
-            let gate = engine.matmul(&z, w("gate"), false, false, c.precision)?;
-            let up = engine.matmul(&z, w("up"), false, false, c.precision)?;
-            let activated = engine.swiglu(&gate, &up)?;
-            let projected = engine.matmul(&activated, w("down"), false, false, c.precision)?;
-            x = engine.add(&x, &projected, 1., c.precision)?;
-        }
-        let h = engine.norm(&x, &weights["final_norm"], c.norm_epsilon)?;
-        cache.length += tokens.len();
-        Ok(h)
+        architecture::hidden_cached(self, engine, weights, tokens, cache, injection)
     }
+
     pub fn save(
         &self,
         engine: &mut Engine,
@@ -456,30 +535,4 @@ pub fn load_tensors(engine: &mut Engine, path: &Path) -> Result<BTreeMap<String,
         out.insert(name, engine.from_f32(tensor.shape(), &values)?);
     }
     Ok(out)
-}
-
-fn transformer_block(
-    g: &mut Graph,
-    v: &[Var],
-    sequence: usize,
-    heads: usize,
-    theta: f32,
-    eps: f32,
-) -> Result<Var> {
-    let mut x = v[0];
-    let z = g.norm(x, v[1], eps)?;
-    let q = g.matmul(z, v[2])?;
-    let k = g.matmul(z, v[3])?;
-    let value = g.matmul(z, v[4])?;
-    let q = g.rope(q, sequence, 0, heads, theta)?;
-    let k = g.rope(k, sequence, 0, heads, theta)?;
-    let attention = g.attention(q, k, value, sequence, heads)?;
-    let projected = g.matmul(attention, v[5])?;
-    x = g.add(x, projected)?;
-    let z = g.norm(x, v[6], eps)?;
-    let gate = g.matmul(z, v[7])?;
-    let up = g.matmul(z, v[8])?;
-    let activated = g.swiglu(gate, up)?;
-    let projected = g.matmul(activated, v[9])?;
-    g.add(x, projected)
 }

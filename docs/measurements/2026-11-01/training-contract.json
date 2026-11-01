@@ -1,0 +1,8 @@
+{
+  "all_controls_sgd_max_error": 0.0,
+  "basis_change_squared_norm": 124.22222930246971,
+  "directory": "/home/renya/Sejong/.cache/cv-contract-118446",
+  "predictor_squared_norm": 0.004813203432121327,
+  "resume_optimizer_max_error": 0.0,
+  "resume_weights_max_error": 0.0
+}

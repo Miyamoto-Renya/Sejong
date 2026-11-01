@@ -46,6 +46,10 @@ Memory는 선언된 context마다 동일한 FP64 실행 경로의 full/direct �
 
 값은 원시 byte열이다. JSON에서는 UTF-8 문자열 또는 `{"hex":"ff00fe"}`로 표현한다. `generate --raw`는 선택한 값을 그대로 출력한다. 독립 byte Transformer의 크기와 학습 설정은 `configs/*.toml`에 둔다.
 
+Byte·NativeValue 본체는 구간 단위 global 모델과 local encoder/decoder, GQA와 선택적 전문가를 지원한다. `train`은 정확 SGD와 공유 encoder의 교정 SGD를 실행하고, `benchmark`는 실제 학습·검증 loss·캐시 추론·실행 FLOPs를 비교한다. [계층 본체와 교정 학습](docs/compute.md)에 모델 예산·실행 경로·측정 명령을 정리했다.
+
+기본 `configs/sejong.toml`은 계층·GQA·전문가 본체를 정확 SGD로 학습한다. [RX 6600 실측](docs/measurements/2026-11-01/README.md)에서 같은 4,096-byte 정확 미분 step은 dense의 1.2383초에서 0.2658초로 줄었고, 주요 FLOPs는 9.16배 줄었다. 교정 SGD와 폭을 2배 늘린 구성도 같은 측정 명령으로 실행했다.
+
 ## 코드와 확인
 
 | 경로 | 내용 |

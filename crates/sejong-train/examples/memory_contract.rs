@@ -257,6 +257,7 @@ fn main() -> Result<()> {
             norm_epsilon: f32::EPSILON,
             precision: DType::F32,
             seed: 8411,
+            ..ModelConfig::default()
         },
         requests: vec![
             ByteValue::from("one"),

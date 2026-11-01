@@ -3,6 +3,7 @@ import argparse
 import json
 import math
 import random
+import tomllib
 from pathlib import Path
 
 
@@ -44,6 +45,8 @@ def main():
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--heads', type=int, default=4)
     parser.add_argument('--ffn-width', type=int, default=288)
+    parser.add_argument('--value-model-config', type=Path,
+                        help='TOML model configuration for the native byte-value original')
     parser.add_argument('--steps', type=int, default=1200)
     parser.add_argument('--query-steps', type=int, default=1600)
     parser.add_argument('--lexical-steps', type=int, default=400)
@@ -56,6 +59,12 @@ def main():
     parser.add_argument('--checkpoint-every', type=int, default=0)
     parser.add_argument('--seed', type=int, default=99271)
     args = parser.parse_args()
+    value_model = None
+    if args.value_model_config is not None:
+        with args.value_model_config.open('rb') as source:
+            value_model = tomllib.load(source).get('model')
+        if not isinstance(value_model, dict):
+            parser.error('value-model-config requires a model table')
     people, predicates = args.people, args.predicates
     n, p = len(people), len(predicates)
     if len(set(people + predicates)) != n + p:
@@ -209,7 +218,12 @@ def main():
                     checkpoint_every=args.checkpoint_every, query_loss={}, background={'kind': 'empirical'}, optimizer={}, batch={})
         save(args.out / f'{"a" if stage == 0 else "b"}.json', spec)
     prompts = [f'What item is at {s}?' for s in sites]
-    save(args.out / 'native-b.json', dict(model=model('native-value-b', 8, max(len(t.encode()) for t in prompts) + 2),
+    required_context = max(len(t.encode()) for t in prompts) + 2
+    if value_model is None:
+        value_model = model('native-value-b', 8, required_context)
+    elif value_model.get('context', required_context) < required_context:
+        parser.error('native value context must cover each prompt with BOS and SEP')
+    save(args.out / 'native-b.json', dict(model=value_model,
          requests=sites, prompts=prompts, values=items, labels=[(i + 1) % count for i in range(count)],
          steps=args.fact_steps, learning_rate=args.learning_rate, checkpoint_every=args.checkpoint_every, optimizer={}, batch={}))
     save(args.out / 'assembly.json', dict(scene='role-0/model', instruction='role-1/model', request='role-2/model',

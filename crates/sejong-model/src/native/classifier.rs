@@ -416,6 +416,14 @@ fn logsoftmax(xs: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
     let logz = max + xs.iter().map(|x| (x - max).exp()).sum::<f64>().ln();
     Ok((xs.iter().map(|x| x - logz).collect(), p))
 }
+fn validate_parser_config(config: &ModelConfig) -> Result<()> {
+    config.validate()?;
+    ensure(
+        config.hierarchy.is_none() && config.kv_heads.is_none() && config.experts.is_none(),
+        "역할별 parser의 hierarchy, kv_heads, experts 설정은 생략해야 한다. 이 옵션은 byte 모델과 NativeValue에 적용한다.",
+    )
+}
+
 impl Classifier {
     pub fn initialize(e: &mut Engine, c: ModelConfig, m: ClassifierMetadata) -> Result<Self> {
         Self::initialize_with_encoder(e, c, m, None)
@@ -426,6 +434,7 @@ impl Classifier {
         mut metadata: ClassifierMetadata,
         path: Option<&Path>,
     ) -> Result<Self> {
+        validate_parser_config(&c)?;
         ensure(
             c.width > 0
                 && c.layers > 0
@@ -1400,6 +1409,7 @@ impl Classifier {
     }
     fn load_format(e: &mut Engine, path: &Path, format: &str) -> Result<Self> {
         let stored: Stored = json::from_slice(&std::fs::read(path.join("role.json"))?)?;
+        validate_parser_config(&stored.config)?;
         ensure(
             stored.format == format,
             "role artifact architecture version differs",

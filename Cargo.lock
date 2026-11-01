@@ -774,6 +774,7 @@ name = "sejong-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blake3",
  "clap",
  "sejong-core",
  "sejong-gpu",

@@ -1,5 +1,8 @@
 //! Rust-owned HIP tensors and native launch of Triton-compiled kernels.
 mod common_ops;
+mod counters;
+mod hierarchy_ops;
+pub use counters::ExecutionCounters;
 pub mod graph;
 mod hip;
 mod parser_ops;
@@ -128,6 +131,7 @@ pub struct Engine {
     compiler: Compiler,
     kernels: HashMap<String, Module>,
     config: GpuConfig,
+    counters: ExecutionCounters,
 }
 #[derive(Clone)]
 pub enum Arg {
@@ -193,6 +197,7 @@ impl Engine {
             compiler: Compiler::start(&root)?,
             kernels: HashMap::new(),
             config,
+            counters: ExecutionCounters::default(),
         })
     }
     pub fn allocation_bytes(bytes: usize) -> Result<usize> {
@@ -290,6 +295,26 @@ impl Engine {
             std::slice::from_raw_parts(data.as_ptr().cast(), data.len() * 4)
         })
     }
+    pub fn to_i32(&self, t: &Tensor) -> Result<Vec<i32>> {
+        ensure(
+            t.dtype == DType::I32,
+            "integer download requires i32 tensor",
+        )?;
+        self.synchronize()?;
+        let mut data = vec![0i32; t.len()];
+        unsafe {
+            self.device.hip.check(
+                (self.device.hip.memcpy)(
+                    data.as_mut_ptr().cast(),
+                    t.pointer() as *const c_void,
+                    data.len() * 4,
+                    2,
+                ),
+                "device-to-host i32",
+            )?;
+        }
+        Ok(data)
+    }
     pub fn to_f32(&mut self, t: &Tensor) -> Result<Vec<f32>> {
         let t = self.cast(t, DType::F32)?;
         self.synchronize()?;
@@ -330,7 +355,12 @@ impl Engine {
         let request = json::json!({"operation":operation,"signature":signature,"constants":constants,"architecture":self.config.architecture,"wavefront":self.config.wavefront,"warps":4});
         let key = json::to_string(&request)?;
         if !self.kernels.contains_key(&key) {
+            let started = std::time::Instant::now();
             let r = self.compiler.compile(&request)?;
+            self.counters.compile_seconds += started.elapsed().as_secs_f64();
+            if !r["cache_hit"].as_bool().unwrap_or(false) {
+                self.counters.compilations += 1;
+            }
             let module = Module::load(
                 self.device.clone(),
                 Path::new(
@@ -381,6 +411,7 @@ impl Engine {
                 operation,
             )?;
         }
+        self.count_execution(operation, args, &request["constants"]);
         Ok(())
     }
     pub fn full(&mut self, shape: &[usize], dtype: DType, value: f32) -> Result<Tensor> {

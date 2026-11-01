@@ -24,6 +24,13 @@ enum Op {
     Cast(Var),
     Add(Var, Var),
     Matmul(Var, Var),
+    LowRankMatmul(Var, Var, Tensor, Tensor, Tensor, Tensor),
+    GroupedAttention(Var, Var, Var, Tensor, usize, usize, usize, Option<usize>),
+    PatchPool(Var, usize, usize),
+    PatchBroadcast(Var, Var, usize, usize),
+    RouteTopK(Var, Tensor),
+    ExpertCombine(Vec<(Var, Tensor)>, Var),
+    RowMean(Var),
     Embedding(Var, Tensor),
     Norm(Var, Var, f32),
     SwiGlu(Var, Var),
@@ -34,6 +41,7 @@ enum Op {
 struct Node {
     value: Tensor,
     gradient: Option<Tensor>,
+    projected_gradient: Option<Tensor>,
     op: Op,
     requires_grad: bool,
 }
@@ -57,6 +65,7 @@ impl<'a> Graph<'a> {
         self.nodes.push(Node {
             value,
             gradient: None,
+            projected_gradient: None,
             op: if self.training && requires_grad {
                 op
             } else {
@@ -99,6 +108,9 @@ impl<'a> Graph<'a> {
     pub fn gradient(&self, v: Var) -> Option<&Tensor> {
         self.nodes[v.0].gradient.as_ref()
     }
+    pub fn projected_gradient(&self, v: Var) -> Option<&Tensor> {
+        self.nodes[v.0].projected_gradient.as_ref()
+    }
     pub fn leaf(&mut self, value: Tensor, trainable: bool) -> Var {
         self.insert(value, Op::Leaf, trainable)
     }
@@ -130,6 +142,112 @@ impl<'a> Graph<'a> {
             self.tensor(a).dtype,
         )?;
         Ok(self.insert(y, Op::Matmul(a, b), self.needs(&[a, b])))
+    }
+    pub fn low_rank_matmul(
+        &mut self,
+        x: Var,
+        base: Var,
+        u: &Tensor,
+        a: &Tensor,
+        v: &Tensor,
+    ) -> Result<Var> {
+        let xt = self.tensor(x).clone();
+        let wt = self.tensor(base).clone();
+        ensure(
+            u.shape.len() == 2
+                && a.shape.len() == 2
+                && v.shape.len() == 2
+                && wt.shape == [u.shape[0], v.shape[0]]
+                && a.shape == [u.shape[1], v.shape[1]],
+            "low-rank matrix dimensions",
+        )?;
+        let dense = self.engine.matmul(&xt, &wt, false, false, xt.dtype)?;
+        let xu = self.engine.matmul(&xt, u, false, false, DType::F32)?;
+        let xa = self.engine.matmul(&xu, a, false, false, DType::F32)?;
+        let correction = self.engine.matmul(&xa, v, false, true, xt.dtype)?;
+        let y = self.engine.add(&dense, &correction, 1., xt.dtype)?;
+        Ok(self.insert(
+            y,
+            Op::LowRankMatmul(x, base, u.clone(), a.clone(), v.clone(), xu),
+            self.needs(&[x, base]),
+        ))
+    }
+    pub fn row_mean(&mut self, x: Var) -> Result<Var> {
+        let y = self.engine.row_mean(&self.nodes[x.0].value)?;
+        Ok(self.insert(y, Op::RowMean(x), self.needs(&[x])))
+    }
+    pub fn patch_pool(&mut self, x: Var, sequence: usize, patch: usize) -> Result<Var> {
+        let y = self
+            .engine
+            .patch_pool(&self.nodes[x.0].value, sequence, patch)?;
+        Ok(self.insert(y, Op::PatchPool(x, sequence, patch), self.needs(&[x])))
+    }
+    pub fn patch_broadcast(
+        &mut self,
+        x: Var,
+        bos: Var,
+        sequence: usize,
+        patch: usize,
+    ) -> Result<Var> {
+        let y = self.engine.patch_broadcast(
+            &self.nodes[x.0].value,
+            &self.nodes[bos.0].value,
+            sequence,
+            patch,
+        )?;
+        Ok(self.insert(
+            y,
+            Op::PatchBroadcast(x, bos, sequence, patch),
+            self.needs(&[x, bos]),
+        ))
+    }
+    pub fn route_topk(&mut self, x: Var, topk: usize) -> Result<(Var, Tensor)> {
+        let (weights, ids) = self.engine.route_topk(&self.nodes[x.0].value, topk)?;
+        let y = self.insert(weights, Op::RouteTopK(x, ids.clone()), self.needs(&[x]));
+        Ok((y, ids))
+    }
+    pub fn expert_combine(&mut self, outputs: &[(Var, Tensor)], weights: Var) -> Result<Var> {
+        let tensors = outputs
+            .iter()
+            .map(|(v, ids)| (self.tensor(*v).clone(), ids.clone()))
+            .collect::<Vec<_>>();
+        let y = self
+            .engine
+            .expert_combine(&tensors, &self.nodes[weights.0].value)?;
+        let mut inputs = outputs.iter().map(|(v, _)| *v).collect::<Vec<_>>();
+        inputs.push(weights);
+        Ok(self.insert(
+            y,
+            Op::ExpertCombine(outputs.to_vec(), weights),
+            self.needs(&inputs),
+        ))
+    }
+    pub fn attention_grouped(
+        &mut self,
+        q: Var,
+        k: Var,
+        v: Var,
+        t: usize,
+        query_heads: usize,
+        kv_heads: usize,
+        window: Option<usize>,
+    ) -> Result<Var> {
+        let (y, lse) = self.engine.attention_grouped(
+            &self.nodes[q.0].value,
+            &self.nodes[k.0].value,
+            &self.nodes[v.0].value,
+            t,
+            t,
+            0,
+            query_heads,
+            kv_heads,
+            window,
+        )?;
+        Ok(self.insert(
+            y,
+            Op::GroupedAttention(q, k, v, lse, t, query_heads, kv_heads, window),
+            self.needs(&[q, k, v]),
+        ))
     }
     pub fn embedding(&mut self, w: Var, ids: &Tensor, dtype: DType) -> Result<Var> {
         let y = self.engine.embedding(&self.nodes[w.0].value, ids, dtype)?;
@@ -299,6 +417,18 @@ impl<'a> Graph<'a> {
         }
         Ok(())
     }
+    fn accumulate_projected(&mut self, v: Var, g: Tensor) -> Result<()> {
+        if !self.nodes[v.0].requires_grad {
+            return Ok(());
+        }
+        self.nodes[v.0].projected_gradient =
+            Some(if let Some(current) = &self.nodes[v.0].projected_gradient {
+                self.engine.add(current, &g, 1., DType::F32)?
+            } else {
+                g
+            });
+        Ok(())
+    }
     /// Each supplied root contributes its mean multiplied by the supplied scale.
     pub fn select_rows(&mut self, a: Var, b: Var, mask: &Tensor) -> Result<Var> {
         let y = self
@@ -331,6 +461,98 @@ impl<'a> Graph<'a> {
             let op = self.nodes[i].op.clone();
             match op {
                 Op::Leaf => {}
+                Op::RowMean(x) => {
+                    let dx = self
+                        .engine
+                        .row_mean_backward(&dy, &self.nodes[x.0].value.shape)?;
+                    self.accumulate(x, dx)?;
+                }
+                Op::PatchPool(x, t, p) => {
+                    let dx =
+                        self.engine
+                            .patch_pool_backward(&dy, &self.nodes[x.0].value.shape, t, p)?;
+                    self.accumulate(x, dx)?;
+                }
+                Op::PatchBroadcast(x, bos, t, p) => {
+                    let (dx, db) = self.engine.patch_broadcast_backward(
+                        &dy,
+                        &self.nodes[x.0].value.shape,
+                        t,
+                        p,
+                    )?;
+                    self.accumulate(x, dx)?;
+                    self.accumulate(bos, db)?;
+                }
+                Op::RouteTopK(x, ids) => {
+                    let dx = self.engine.route_topk_backward(
+                        &self.nodes[x.0].value,
+                        &ids,
+                        &self.nodes[i].value,
+                        &dy,
+                        self.tensor(x).shape[1],
+                    )?;
+                    self.accumulate(x, dx)?;
+                }
+                Op::ExpertCombine(outputs, weights) => {
+                    let tensors = outputs
+                        .iter()
+                        .map(|(v, ids)| (self.tensor(*v).clone(), ids.clone()))
+                        .collect::<Vec<_>>();
+                    let (gradients, dw) = self.engine.expert_combine_backward(
+                        &tensors,
+                        &self.nodes[weights.0].value,
+                        &dy,
+                    )?;
+                    for ((v, _), gradient) in outputs.into_iter().zip(gradients) {
+                        self.accumulate(v, gradient)?;
+                    }
+                    self.accumulate(weights, dw)?;
+                }
+                Op::GroupedAttention(q, k, v, lse, t, h, kh, w) => {
+                    let (dq, dk, dv) = self.engine.attention_grouped_backward(
+                        &self.nodes[q.0].value,
+                        &self.nodes[k.0].value,
+                        &self.nodes[v.0].value,
+                        &self.nodes[i].value,
+                        &lse,
+                        &dy,
+                        t,
+                        h,
+                        kh,
+                        w,
+                    )?;
+                    self.accumulate(q, dq)?;
+                    self.accumulate(k, dk)?;
+                    self.accumulate(v, dv)?;
+                }
+                Op::LowRankMatmul(x, base, u, a, v, xu) => {
+                    let dv = self.engine.matmul(&dy, &v, false, false, DType::F32)?;
+                    if self.needs(&[base]) {
+                        let target = self.engine.matmul(&xu, &dv, true, false, DType::F32)?;
+                        self.accumulate_projected(base, target)?;
+                        let gradient = self.engine.matmul(
+                            &self.nodes[x.0].value,
+                            &dy,
+                            true,
+                            false,
+                            DType::F32,
+                        )?;
+                        self.accumulate(base, gradient)?;
+                    }
+                    if self.needs(&[x]) {
+                        let dense = self.engine.matmul(
+                            &dy,
+                            &self.nodes[base.0].value,
+                            false,
+                            true,
+                            DType::F32,
+                        )?;
+                        let da = self.engine.matmul(&dv, &a, false, true, DType::F32)?;
+                        let correction = self.engine.matmul(&da, &u, false, true, DType::F32)?;
+                        let dx = self.engine.add(&dense, &correction, 1., DType::F32)?;
+                        self.accumulate(x, dx)?;
+                    }
+                }
                 Op::LayerNorm(x, w, b, eps) => {
                     let (dx, dw, db) = self.engine.layer_norm_backward(
                         &self.nodes[x.0].value,
@@ -434,10 +656,19 @@ impl<'a> Graph<'a> {
                         .iter()
                         .map(|v| nested.gradient(*v).cloned())
                         .collect();
+                    let projected: Vec<_> = variables
+                        .iter()
+                        .map(|v| nested.projected_gradient(*v).cloned())
+                        .collect();
                     drop(nested);
-                    for (input, gradient) in inputs.into_iter().zip(gradients) {
+                    for ((input, gradient), target) in
+                        inputs.into_iter().zip(gradients).zip(projected)
+                    {
                         if let Some(gradient) = gradient {
                             self.accumulate(input, gradient)?;
+                        }
+                        if let Some(target) = target {
+                            self.accumulate_projected(input, target)?;
                         }
                     }
                 }
@@ -448,7 +679,12 @@ impl<'a> Graph<'a> {
                     self.accumulate(a, da)?;
                     self.accumulate(b, db)?;
                 }
-                Op::Cast(x) => self.accumulate(x, dy)?,
+                Op::Cast(x) => {
+                    self.accumulate(x, dy)?;
+                    if let Some(target) = self.nodes[i].projected_gradient.clone() {
+                        self.accumulate_projected(x, target)?;
+                    }
+                }
                 Op::Add(x, z) => {
                     self.accumulate(x, dy.clone())?;
                     self.accumulate(z, dy)?;

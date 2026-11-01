@@ -1,0 +1,38 @@
+# 기존 본체의 정확 SGD 비교 설정. 폭·층·자료 길이는 기존 sejong 설정을 사용한다.
+[model]
+id = "sejong"
+width = 512
+layers = 8
+heads = 8
+ffn_width = 1536
+context = 2048
+precision = "f16"
+seed = 42
+
+[training]
+gradient_diagnostics_every = 0
+optimizer = "sgd"
+clip_enabled = false
+activation_checkpointing = true
+steps = 10000
+sequence = 512
+batch = 1
+accumulation = 8
+learning_rate = 0.0003
+min_learning_rate = 0.00003
+warmup_steps = 100
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.0
+clip_norm = 1.0
+loss_scale = 1.0
+checkpoint_every = 500
+log_every = 10
+seed = 123
+
+[gpu]
+device = 0
+architecture = "gfx1032"
+wavefront = 32
+memory_mb = 0
+
