@@ -1,5 +1,7 @@
 //! Resumable local query preparation, vector memory learning and native value heads.
+mod query_cache;
 use crate::Adam;
+use query_cache::QueryCache;
 use sejong_core::{
     DType, Result, Rng, TrainConfig, ensure, json,
     native::{BackgroundPolicy, BatchPolicy, MemoryTraining, RevisionTraining, ValueTraining},
@@ -16,6 +18,8 @@ use sejong_model::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+#[path = "value_execution.rs"]
+mod value_execution;
 
 #[derive(Serialize, Deserialize)]
 struct Progress {
@@ -29,6 +33,8 @@ struct Progress {
     batch_size: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     parameter_rng: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    activation_checkpointing: Option<bool>,
 }
 fn fingerprint(spec: &impl Serialize, recipe: &str) -> Result<String> {
     let mut value = json::to_value(spec)?;
@@ -67,7 +73,7 @@ fn workspace_sum(terms: impl IntoIterator<Item = (u128, usize)>) -> Result<usize
     usize::try_from(bytes)
         .map_err(|_| sejong_core::Error::Message("training workspace size overflow".into()))
 }
-fn work_bytes(memory: &Memory, query_views: usize) -> Result<usize> {
+fn query_work_bytes(memory: &Memory) -> Result<usize> {
     let c = &memory.metadata.config;
     let (t, d, f, l, h) = (
         c.tokens as u128,
@@ -78,54 +84,25 @@ fn work_bytes(memory: &Memory, query_views: usize) -> Result<usize> {
     );
     // One query keeps 16 width-sized and three FF-sized tensors per block,
     // its input, first-row gather/output, indices and attention normalizers.
-    let query = workspace_sum([
+    workspace_sum([
         (1 + 16 * l, allocation(t * d, DType::F32)?),
         (3 * l, allocation(t * f, DType::F32)?),
         (l, allocation(t * h, DType::F32)?),
         (2, allocation(d, DType::F32)?),
         (1, allocation(1, DType::I32)?),
-    ])?;
+    ])
+}
+fn work_bytes(memory: &Memory, query_views: usize) -> Result<usize> {
+    let c = &memory.metadata.config;
     // Active query views retain their forward values and adjoints together.
     if query_views > 0 {
-        workspace_sum([(2 * query_views as u128, query)])
+        workspace_sum([(2 * query_views as u128, query_work_bytes(memory)?)])
     } else {
         workspace_sum([
-            (1, query),
             (4, allocation(c.hidden as u128, DType::F32)?),
-            (2, allocation(d, DType::F32)?),
+            (3, allocation(c.dimension as u128, DType::F32)?),
         ])
     }
-}
-fn value_work_bytes(model: &NativeValue) -> Result<usize> {
-    let c = &model.metadata.model;
-    let t = model
-        .metadata
-        .prompts
-        .iter()
-        .map(|x| x.len() + 2)
-        .max()
-        .unwrap_or(0) as u128;
-    let (d, f, l, h) = (
-        c.width as u128,
-        c.ffn_width as u128,
-        c.layers as u128,
-        c.heads as u128,
-    );
-    // Count each tensor allocation independently, including allocator rounding.
-    // FP32 covers both model compute dtypes and their FP32 adjoints.
-    workspace_sum([
-        (2 * (2 + 12 * l), allocation(t * d, DType::F32)?),
-        (6 * l, allocation(t * f, DType::F32)?),
-        (2 * l, allocation(t * h, DType::F32)?),
-        (4, allocation(d, DType::F32)?),
-        (
-            4,
-            allocation(model.metadata.values.len() as u128, DType::F32)?,
-        ),
-        (2, allocation(1, DType::F32)?),
-        (1, allocation(t, DType::I32)?),
-        (2, allocation(1, DType::I32)?),
-    ])
 }
 fn resolve_batch(
     e: &Engine,
@@ -222,6 +199,7 @@ fn progress(
         guard,
         batch_size,
         parameter_rng: None,
+        activation_checkpointing: None,
     }
 }
 fn open_run(out: &Path) -> Result<()> {
@@ -397,10 +375,14 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
         start <= spec.fact_steps,
         "fact checkpoint step exceeds target",
     )?;
+    let mut queries = (start < spec.fact_steps)
+        .then(|| QueryCache::prepare(e, &memory, &spec.batch, &params, chunks, out))
+        .transpose()?;
     for step in start..spec.fact_steps {
         let loss = fact_update(
             e,
             &memory,
+            queries.as_mut().unwrap(),
             &spec.labels,
             &mut rng,
             &mut optimizer,
@@ -437,6 +419,8 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
             )?;
         }
     }
+    drop(queries);
+    e.reclaim()?;
     memory.finalize_revision(e, &guard)?;
     memory.save(e, &out.join("model"))?;
     Ok(memory)
@@ -633,6 +617,7 @@ fn query_update(
 fn fact_update(
     e: &mut Engine,
     memory: &Memory,
+    queries: &mut QueryCache,
     labels: &[usize],
     _rng: &mut Rng,
     optimizer: &mut Adam,
@@ -648,11 +633,6 @@ fn fact_update(
     for start in (0..labels.len()).step_by(chunks) {
         let end = (start + chunks).min(labels.len());
         let count = end - start;
-        let contexts: Vec<f32> = memory.metadata.contexts[start..end]
-            .iter()
-            .flatten()
-            .map(|x| *x as f32)
-            .collect();
         let targets: Vec<f32> = labels[start..end]
             .iter()
             .flat_map(|label| {
@@ -661,10 +641,10 @@ fn fact_update(
                     .map(|x| *x as f32)
             })
             .collect();
-        let input = e.from_f32(&[count * c.tokens, d], &contexts)?;
+        let input = queries.rows(e, start, count)?;
         let mut g = Graph::new(e, true);
         let w = memory.bind(&mut g, false, true);
-        let q = memory.query(&mut g, &w, &input)?;
+        let q = g.leaf(input, false);
         let output = memory.read_query(&mut g, &w, q)?;
         let values = g.value(output)?;
         loss += values
@@ -754,10 +734,14 @@ pub fn revise_memory(
         "revision checkpoint step exceeds target",
     )?;
     let initial_steps = original.metadata.fact_steps;
+    let mut queries = (start < spec.steps)
+        .then(|| QueryCache::prepare(e, &memory, &spec.batch, &params, chunks, out))
+        .transpose()?;
     for step in start..spec.steps {
         let loss = fact_update(
             e,
             &memory,
+            queries.as_mut().unwrap(),
             &spec.labels,
             &mut rng,
             &mut optimizer,
@@ -799,6 +783,8 @@ pub fn revise_memory(
             )?;
         }
     }
+    drop(queries);
+    e.reclaim()?;
     memory.metadata.revisions.push(RevisionProvenance {
         parent_signature: guard.parent_signature.clone(),
         data_fingerprint: source,
@@ -811,6 +797,23 @@ pub fn revise_memory(
 }
 
 pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<NativeValue> {
+    use sejong_core::OptimizerKind;
+    use sejong_gpu::parameter_vjp::{GradientMaterializer, GradientPlan};
+    ensure(
+        matches!(
+            spec.optimizer_kind,
+            OptimizerKind::Adamw | OptimizerKind::Sgd
+        ),
+        "native value optimizer requires adamw or sgd",
+    )?;
+    if spec.optimizer_kind == OptimizerKind::Sgd {
+        ensure(
+            spec.optimizer.momentum_examples.is_none()
+                && spec.optimizer.variance_examples.is_none()
+                && spec.optimizer.epsilon.is_none(),
+            "native SGD uses weight_decay and clip_norm; moment options require adamw",
+        )?;
+    }
     if let Some(policy) = &spec.parameter_vjp {
         policy.validate()?;
     }
@@ -854,11 +857,11 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
         "native value checkpoint source mismatch",
     )?;
     let parameters = model.parameters();
-    let materializer = spec
-        .parameter_vjp
-        .as_ref()
+    let materializer = (spec.optimizer_kind == OptimizerKind::Adamw)
+        .then_some(spec.parameter_vjp.as_ref())
+        .flatten()
         .map(|_| {
-            sejong_gpu::parameter_vjp::GradientMaterializer::new(
+            GradientMaterializer::new(
                 e,
                 &parameters
                     .iter()
@@ -878,40 +881,57 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
             })?;
         }
     }
-    let mut optimizer = if let Some(p) = &saved {
-        ensure(p.phase == "value", "native value checkpoint phase mismatch")?;
-        Adam::load_parameters(
-            e,
-            &parameters,
-            &spec.resume.as_ref().unwrap().join("optimizer.safetensors"),
-            p.optimizer_step,
-        )?
-    } else {
-        Adam::new(e, &parameters)?
-    };
-    let allowed = resolve_batch(
-        e,
-        &spec.batch,
-        value_work_bytes(&model)?,
-        spec.requests.len(),
-        &parameters,
-        if model.body.config.precision == DType::F32 {
-            0
+    let mut optimizer = if spec.optimizer_kind == OptimizerKind::Adamw {
+        Some(if let Some(p) = &saved {
+            ensure(p.phase == "value", "native value checkpoint phase mismatch")?;
+            Adam::load_parameters(
+                e,
+                &parameters,
+                &spec.resume.as_ref().unwrap().join("optimizer.safetensors"),
+                p.optimizer_step,
+            )?
         } else {
-            let casts = model
-                .body
-                .parameters
+            Adam::new(e, &parameters)?
+        })
+    } else {
+        if let Some(p) = &saved {
+            ensure(
+                p.phase == "value" && p.optimizer_step == p.step,
+                "native SGD checkpoint step mismatch",
+            )?;
+        }
+        None
+    };
+    let compact = if spec.optimizer_kind == OptimizerKind::Sgd {
+        Some(GradientPlan::new(
+            e,
+            &parameters
                 .iter()
-                .map(|p| p.value.len())
-                .chain(std::iter::once(model.embedding.len()))
-                .map(|elements| {
-                    allocation(elements as u128, model.body.config.precision).map(|size| (1, size))
-                })
-                .collect::<Result<Vec<_>>>()?;
-            workspace_sum(casts)?
-        },
+                .map(|p| p.value.clone())
+                .collect::<Vec<_>>(),
+        )?)
+    } else {
+        None
+    };
+    let execution = value_execution::prepare(
+        e,
+        &model,
+        &parameters,
+        spec,
+        saved
+            .as_ref()
+            .map(|p| (p.batch_size, p.activation_checkpointing.unwrap_or(true))),
     )?;
-    let batch = resume_batch(allowed, saved.as_ref())?;
+    let batch = execution.batch;
+    eprintln!(
+        "{}",
+        json::json!({"native_execution":{
+            "optimizer":spec.optimizer_kind,"batch":batch,
+            "activation_checkpointing":execution.checkpointing,
+            "gradient_and_cast_bytes":execution.fixed_bytes,
+            "activation_and_factor_bytes":execution.workspace_bytes,
+        }})
+    );
     let settings =
         spec.optimizer
             .configuration(spec.steps, spec.learning_rate, batch, spec.requests.len())?;
@@ -934,6 +954,7 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
                 .collect::<Vec<_>>(),
         )?;
         let mut g = Graph::new(e, true);
+        g.checkpointing = execution.checkpointing;
         if let Some(policy) = &spec.parameter_vjp {
             g.configure_parameter_vjp(policy.clone(), parameter_rng.as_ref().unwrap().clone())?;
         }
@@ -942,21 +963,51 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
         let value = g.value(loss)?.iter().map(|x| *x as f64).sum::<f64>() / batch as f64;
         g.backward(&[(loss, 1.)])?;
         let parameter_statistics = g.parameter_vjp_statistics().clone();
-        let gradients = if let Some(materializer) = &materializer {
-            let gradients = leaves
+        let compact_gradients = (compact.is_some() || materializer.is_some()).then(|| {
+            leaves
                 .iter()
                 .map(|v| g.parameter_gradient(*v))
-                .collect::<Vec<_>>();
-            parameter_rng = g.parameter_vjp_rng();
-            drop(g);
-            materializer.materialize(e, &gradients)?
+                .collect::<Vec<_>>()
+        });
+        let dense_gradients = if compact_gradients.is_none() {
+            leaves.iter().map(|v| g.gradient(*v).cloned()).collect()
         } else {
-            let gradients = leaves.iter().map(|v| g.gradient(*v).cloned()).collect();
-            drop(g);
-            gradients
+            Vec::new()
         };
-        optimizer.accumulate(e, gradients)?;
-        optimizer.update(e, &parameters, &settings, spec.learning_rate)?;
+        if spec.parameter_vjp.is_some() {
+            parameter_rng = g.parameter_vjp_rng();
+        }
+        drop(g);
+        if let Some(plan) = &compact {
+            let packed = plan.pack(e, compact_gradients.as_ref().unwrap())?;
+            let clipping = if settings.clip_enabled {
+                let norm = plan.norm(e, &packed)?;
+                ensure(norm.is_finite(), "native clipping gradient is nonfinite")?;
+                if norm > settings.clip_norm as f64 {
+                    settings.clip_norm as f64 / norm
+                } else {
+                    1.
+                }
+            } else {
+                1.
+            };
+            plan.update(
+                e,
+                &packed,
+                spec.learning_rate,
+                clipping as f32,
+                settings.weight_decay,
+            )?;
+        } else {
+            let gradients = if let Some(materializer) = &materializer {
+                materializer.materialize(e, compact_gradients.as_ref().unwrap())?
+            } else {
+                dense_gradients
+            };
+            let optimizer = optimizer.as_mut().unwrap();
+            optimizer.accumulate(e, gradients)?;
+            optimizer.update(e, &parameters, &settings, spec.learning_rate)?;
+        }
         model.metadata.steps = step + 1;
         model.metadata.loss = value;
         if step == start
@@ -978,18 +1029,30 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
         if (spec.checkpoint_every > 0 && (step + 1) % spec.checkpoint_every == 0)
             || step + 1 == spec.steps
         {
-            let mut state = progress("value", step + 1, &optimizer, &rng, &source, None, batch);
-            state.parameter_rng = parameter_rng.as_ref().map(|rng| rng.state);
+            let state = Progress {
+                format: "sejong-local-training-v3".into(),
+                phase: "value".into(),
+                step: step + 1,
+                optimizer_step: optimizer.as_ref().map_or(step + 1, |o| o.step),
+                rng: rng.state,
+                source: source.clone(),
+                guard: None,
+                batch_size: batch,
+                parameter_rng: parameter_rng.as_ref().map(|rng| rng.state),
+                activation_checkpointing: Some(execution.checkpointing),
+            };
             atomic_directory(
                 &out.join(format!("checkpoints/value-{:08}", step + 1)),
                 |dir| {
                     model.save_training(e, &dir.join("original"))?;
-                    let tensors = optimizer.tensors(&parameters);
-                    save_tensors(
-                        e,
-                        &dir.join("optimizer.safetensors"),
-                        tensors.iter().map(|(n, t)| (n.as_str(), t)),
-                    )?;
+                    if let Some(optimizer) = &optimizer {
+                        let tensors = optimizer.tensors(&parameters);
+                        save_tensors(
+                            e,
+                            &dir.join("optimizer.safetensors"),
+                            tensors.iter().map(|(n, t)| (n.as_str(), t)),
+                        )?;
+                    }
                     std::fs::write(dir.join("training.json"), json::to_vec_pretty(&state)?)?;
                     Ok(())
                 },

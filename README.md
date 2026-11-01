@@ -48,7 +48,7 @@ Memory는 선언된 context마다 동일한 FP64 실행 경로의 full/direct �
 
 Byte·NativeValue 본체는 구간 단위 global 모델과 local encoder/decoder, GQA와 선택적 전문가를 지원한다. `train`은 순전파 기저 parameter VJP, 정확 SGD와 공유 encoder의 교정 SGD를 실행하고, `benchmark`는 실제 학습·검증 loss·캐시 추론·실행 FLOPs를 비교한다. [계층 본체와 교정 학습](docs/compute.md)에 모델 예산·실행 경로·측정 명령을 정리했다.
 
-기본 `configs/sejong.toml`은 계층·GQA·전문가 본체의 가중치를 [순전파 기저와 잔차 표집](docs/parameter-vjp.md)으로 미분한다. 입력 미분은 기존 역전파를 실행하고, SGD는 저랭크 인수와 선택 행을 직접 합산한다. NativeValue 학습도 같은 미분을 Adam 갱신에 연결한다. [구조 변경의 RX 6600 실측](docs/measurements/2026-11-01/README.md)에는 dense·계층·교정 SGD·확대 본체의 비교를 기록했다.
+기본 `configs/sejong.toml`은 계층·GQA·전문가 본체의 가중치를 [순전파 기저와 잔차 표집](docs/parameter-vjp.md)으로 미분한다. 입력 미분은 기존 역전파를 실행하고, SGD는 저랭크 인수와 선택 행을 직접 합산한다. NativeValue도 `optimizer_kind=sgd`에서 같은 직접 갱신을 사용하며 기본 `adamw`는 dense moments로 갱신한다. NativeValue 실행 계획은 계층별 작업 공간으로 batch와 활성값 보존을 선택한다. Memory fact 학습과 개정은 고정 query를 GPU 또는 임시 파일에 캐시한다. [Native 설정](docs/native-data.md)에 실행 정책을 정리했다. [구조 변경의 RX 6600 실측](docs/measurements/2026-11-01/README.md)에는 dense·계층·교정 SGD·확대 본체의 비교를 기록했다.
 
 [준비 비용을 줄인 RX 6600 실측](docs/measurements/2026-11-01-parameter-vjp-overhead/README.md)에서 기저와 선택표를 관측 안에서 공유해 초기 압축 구현의 평균 step 시간을 0.278→0.259초로 줄였다. 같은 실행의 기존 SGD는 0.263초, 전역 타일 SGD의 정확 미분은 0.257초였다. 전체 byte 모델과 NativeValue의 학습·저장·재개를 검증했다.
 

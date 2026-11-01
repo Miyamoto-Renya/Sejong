@@ -1,0 +1,67 @@
+{
+  "assumptions": {
+    "originals": 10,
+    "ordinary_tokens_per_original": 8000000000.0,
+    "sequence_bytes_including_special_positions": 1024,
+    "values": 4096,
+    "throughput_reference": "26.49M byte-SGD benchmark; conditional extrapolation",
+    "native_gradient": "dense leading matrix FLOPs; global recomputation included",
+    "excluded_work": "pointwise, optimizer, CPU preparation, serialization, port fitting; throughput reference includes its own runtime overhead"
+  },
+  "measured_reference_flops_per_second": 670583479097.9456,
+  "native_value": {
+    "parameters": 295385600,
+    "total_10_parameters": 2953856000,
+    "linear_parameter_uses_per_byte": 16856064.0,
+    "training_flops_per_byte": 131322368.0,
+    "scenarios": [
+      {
+        "bytes_per_token": 2,
+        "total_flops": 2.101157888e+19,
+        "days_per_original": 36.26536858580288,
+        "days_total": 362.65368585802884,
+        "energy_kwh_at_200W": 1740.7376921185385,
+        "electricity_KRW_at_200_per_kwh": 348147.5384237077
+      },
+      {
+        "bytes_per_token": 4,
+        "total_flops": 4.202315776e+19,
+        "days_per_original": 72.53073717160576,
+        "days_total": 725.3073717160577,
+        "energy_kwh_at_200W": 3481.475384237077,
+        "electricity_KRW_at_200_per_kwh": 696295.0768474154
+      },
+      {
+        "bytes_per_token": 6,
+        "total_flops": 6.303473664e+19,
+        "days_per_original": 108.79610575740864,
+        "days_total": 1087.9610575740865,
+        "energy_kwh_at_200W": 5222.213076355616,
+        "electricity_KRW_at_200_per_kwh": 1044442.6152711232
+      }
+    ],
+    "planner_fixed_approx_bytes": 7680025600,
+    "planner_workspace_per_example_bytes": 2308657176,
+    "r4_days_at_TF": {
+      "0.4": 1215.947851851852,
+      "0.67": 725.9390160309563,
+      "1.0": 486.3791407407407
+    }
+  },
+  "memory": {
+    "body_parameters": 76619776,
+    "kv_parameters": 223412224,
+    "original_parameters": 300032000,
+    "port_parameters": 1049600,
+    "readout_parameters": "(dimension+1)*value_count",
+    "context_positions": 128,
+    "forward_flops_per_request": 19732103168,
+    "fact_flops_per_visit": 20849164288,
+    "query_flops_per_base_visit_three_views": 177588928512,
+    "fact_hours_per_million_visits": 8.636410983812123,
+    "query_hours_per_million_visits": 73.56318707159025,
+    "direct_KV_kernel_ms": 15.428521633148193,
+    "all_ten_original_fp64_bytes": 24002560000,
+    "planned_ten_KV_port_transfer_seconds": 1.3715457676770337
+  }
+}

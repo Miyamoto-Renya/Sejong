@@ -64,6 +64,20 @@ Goal 0은 장소, goal 1은 물품이다. `reverse`는 관계 방향, `last`는 
 
 `train-value`는 `model`, `requests`, `prompts`, `values`, `labels`, `steps`, `learning_rate`와 공통 정책을 받는다. SEP hidden에서 값 head를 학습한다. 값은 UTF-8 문자열 또는 `{"hex":"ff00fe"}` 형태다.
 
+Memory의 fact 학습과 `revise`는 고정 본체·context의 query를 한 번 계산한 뒤 K/V 업데이트에 재사용한다. query 전체와 작업 공간이 GPU 예산에 들어오면 GPU에 보관한다. 더 큰 요청 집합은 실행 디렉터리의 임시 FP32 파일에 순차 기록하고 필요한 배치만 읽는다. 실행 종료 시 임시 파일을 정리한다. 재개할 때는 저장된 본체와 context에서 query를 다시 준비한다. fact 배치는 K/V 연산의 작업 공간으로 정하고, query 생성 배치는 본체의 작업 공간으로 따로 정한다.
+
+NativeValue의 `optimizer_kind`는 `adamw`와 `sgd`를 지원하며 기본값은 `adamw`다. `sgd`는 byte 학습과 같은 `GradientPlan`으로 dense·저랭크·선택 행 gradient를 가중치에 직접 적용한다. `parameter_vjp`를 함께 지정하면 압축 결과를 직접 소비한다. Adam은 dense moments를 유지하며 압축 결과를 optimizer 입력으로 복원한다. optimizer 선택은 새 학습 설정에 명시한다.
+
+```json
+{
+  "optimizer_kind": "sgd",
+  "batch": {"max_examples": 8},
+  "parameter_vjp": {"rank": 16, "residual_fraction": 0.25, "block_rows": 32, "seed": 124}
+}
+```
+
+위 배치와 VJP 값은 설정 예시다. NativeValue의 `activation_checkpointing`을 생략하면 활성값 보존 상태에서 메모리에 맞는 최대 배치를 먼저 선택한다. 한 예제의 보존 공간이 예산을 초과하면 checkpoint 재계산으로 배치를 계산한다. `false`는 활성값 보존, `true`는 모델에 지정된 checkpoint 층의 재계산이다. 선택한 실행 정책과 실제 배치를 체크포인트에 기록해 재개 시 사용한다. 패치 뒤의 global 길이, GQA의 KV 폭, 활성 expert 작업량을 배치 계획에 반영한다.
+
 ## 원본 편입과 개정
 
 Assembly는 `scene`, `instruction`, `request`, `query`, `lexica`, `a`, `b`, `catalog`와 추가 원본·경로·예산을 받는다.

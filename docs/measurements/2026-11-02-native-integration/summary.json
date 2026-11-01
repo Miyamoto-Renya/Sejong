@@ -1,0 +1,774 @@
+{
+  "scope": "RX 6600 developer regression workloads; complete training-call wall times include initialization and final/checkpoint serialization",
+  "baseline_git_commit": "7956bab9621fff129d316784af25a64a2dcd9e5c",
+  "hardware": "AMD Radeon RX 6600 gfx1032",
+  "source_paths": {
+    "benchmark": "crates/sejong-train/examples/native_training_benchmark.rs",
+    "paired_sgd": "crates/sejong-train/examples/native_sgd_update_check.rs",
+    "harness": "scripts/bench-native-integration.py"
+  },
+  "fixtures": {
+    "provenance": {
+      "purpose": "development regression and timing workload",
+      "memory_source": "existing create-native-data.py construction, explicit benchmark geometry",
+      "native_source": "docs/measurements/2026-11-01-parameter-vjp/native-b.json",
+      "input_text": "docs/measurements/2026-11-01/train.txt",
+      "native_sequence_bytes": 512,
+      "memory_requests": 65
+    },
+    "memory_config": {
+      "id": "sejong-memory-integration-benchmark",
+      "dimension": 64,
+      "tokens": 32,
+      "layers": 2,
+      "heads": 4,
+      "hidden": 256,
+      "ffn_width": 256,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "readout_temperature": 1.0,
+      "residual_scale": 0.5,
+      "seed": 99277
+    },
+    "native_model": {
+      "id": "sejong",
+      "width": 512,
+      "layers": 8,
+      "heads": 8,
+      "kv_heads": 4,
+      "ffn_width": 1536,
+      "context": 2048,
+      "precision": "f16",
+      "seed": 42,
+      "hierarchy": {
+        "patch_size": 8,
+        "encoder_width": 128,
+        "encoder_layers": 2,
+        "encoder_heads": 2,
+        "encoder_ffn_width": 384,
+        "decoder_width": 128,
+        "decoder_layers": 2,
+        "decoder_heads": 2,
+        "decoder_ffn_width": 384,
+        "local_window": 128,
+        "checkpoint_encoder": false,
+        "checkpoint_decoder": false
+      },
+      "experts": {
+        "count": 4,
+        "top_k": 2,
+        "ffn_width": 384
+      }
+    },
+    "native_parameter_vjp": {
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "block_rows": 32,
+      "seed": 124
+    },
+    "memory_requests": 65,
+    "memory_batch": 16,
+    "native_requests": 32,
+    "native_batch": 8,
+    "native_sequence_bytes": 512,
+    "file_cache": {
+      "requests": 257,
+      "tokens": 1,
+      "batch": 1,
+      "memory_bytes": 95704,
+      "cache_allocation_bytes": 131072
+    }
+  },
+  "memory_16_facts": {
+    "before": {
+      "counters": {
+        "attention_launches": 622,
+        "compilations": 0,
+        "compile_seconds": 0.071616569,
+        "gemm_launches": 5613,
+        "issued_flops": 12877390336,
+        "launches": 15479,
+        "logical_flops": 12749832512
+      },
+      "details": {
+        "fact_steps": 16,
+        "parameters": 137224,
+        "query_steps": 4,
+        "requests": 65
+      },
+      "mode": "memory",
+      "peak_gpu_bytes": 26976780,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 0.307859696
+    },
+    "after": {
+      "counters": {
+        "attention_launches": 472,
+        "compilations": 0,
+        "compile_seconds": 0.06783743099999998,
+        "gemm_launches": 4570,
+        "issued_flops": 6222209536,
+        "launches": 12416,
+        "logical_flops": 6096494912
+      },
+      "details": {
+        "fact_steps": 16,
+        "parameters": 137224,
+        "query_steps": 4,
+        "requests": 65
+      },
+      "mode": "memory",
+      "peak_gpu_bytes": 26976780,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 0.279667269
+    },
+    "time_reduction_fraction": 0.09157556954126278,
+    "logical_flop_reduction_fraction": 0.5218372550178956
+  },
+  "revision_128_steps": {
+    "before": {
+      "counters": {
+        "attention_launches": 1410,
+        "compilations": 0,
+        "compile_seconds": 0.050669655,
+        "gemm_launches": 12950,
+        "issued_flops": 59592843520,
+        "launches": 35041,
+        "logical_flops": 58591047840
+      },
+      "details": {
+        "fact_steps": 144,
+        "steps": 128
+      },
+      "mode": "revision",
+      "peak_gpu_bytes": 10773324,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 0.39461171
+    },
+    "after": {
+      "counters": {
+        "attention_launches": 140,
+        "compilations": 0,
+        "compile_seconds": 0.056517675,
+        "gemm_launches": 4675,
+        "issued_flops": 3245646080,
+        "launches": 9626,
+        "logical_flops": 2259456160
+      },
+      "details": {
+        "fact_steps": 144,
+        "steps": 128
+      },
+      "mode": "revision",
+      "peak_gpu_bytes": 10022084,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 0.21586517
+    },
+    "time_reduction_fraction": 0.4529681595105224,
+    "logical_flop_reduction_fraction": 0.9614368364571648
+  },
+  "query_fusion_128_passes": {
+    "before": {
+      "counters": {
+        "attention_launches": 1280,
+        "compilations": 0,
+        "compile_seconds": 0.061792595,
+        "gemm_launches": 8320,
+        "issued_flops": 56790876160,
+        "launches": 25600,
+        "logical_flops": 56775147520
+      },
+      "details": {
+        "checksum": -13963.952491840348,
+        "passes": 128,
+        "requests": 65
+      },
+      "mode": "query",
+      "peak_gpu_bytes": 9112228,
+      "scope": "fixed query forward passes including context upload and output readback",
+      "seconds": 0.288669541
+    },
+    "after": {
+      "counters": {
+        "attention_launches": 1280,
+        "compilations": 0,
+        "compile_seconds": 0.062958308,
+        "gemm_launches": 5760,
+        "issued_flops": 56790876160,
+        "launches": 23040,
+        "logical_flops": 56775147520
+      },
+      "details": {
+        "checksum": -13963.952491840348,
+        "passes": 128,
+        "requests": 65
+      },
+      "mode": "query",
+      "peak_gpu_bytes": 9112228,
+      "scope": "fixed query forward passes including context upload and output readback",
+      "seconds": 0.285959
+    },
+    "time_reduction_fraction": 0.009389771399539337,
+    "logical_flop_reduction_fraction": 0.0
+  },
+  "native_adam_64_steps": {
+    "before": {
+      "counters": {
+        "attention_launches": 2816,
+        "compilations": 0,
+        "compile_seconds": 0.097129418,
+        "gemm_launches": 29336,
+        "issued_flops": 5691813134336,
+        "launches": 99859,
+        "logical_flops": 5535202017280
+      },
+      "details": {
+        "loss": 2.3822942674160004,
+        "parameters": 26472736,
+        "requests": 32,
+        "steps": 64
+      },
+      "mode": "value",
+      "peak_gpu_bytes": 911652624,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 8.757642301
+    },
+    "after": {
+      "counters": {
+        "attention_launches": 2304,
+        "compilations": 0,
+        "compile_seconds": 0.10000931200000002,
+        "gemm_launches": 24989,
+        "issued_flops": 4615334526976,
+        "launches": 87109,
+        "logical_flops": 4481360068608
+      },
+      "details": {
+        "loss": 3.0220501124858856,
+        "parameters": 26472736,
+        "requests": 32,
+        "steps": 64
+      },
+      "mode": "value",
+      "peak_gpu_bytes": 1001601808,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 8.256653133
+    },
+    "time_reduction_fraction": 0.05720594091206421,
+    "logical_flop_reduction_fraction": 0.1903890671708236
+  },
+  "native_adam_16_steps": {
+    "before": {
+      "counters": {
+        "attention_launches": 704,
+        "compilations": 0,
+        "compile_seconds": 0.09228026399999997,
+        "gemm_launches": 7555,
+        "issued_flops": 1433484656640,
+        "launches": 27408,
+        "logical_flops": 1392856006656
+      },
+      "details": {
+        "loss": 4.213468492031097,
+        "parameters": 26472736,
+        "requests": 32,
+        "steps": 16
+      },
+      "mode": "value",
+      "peak_gpu_bytes": 909995792,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 3.319034294
+    },
+    "after": {
+      "counters": {
+        "attention_launches": 576,
+        "compilations": 0,
+        "compile_seconds": 0.09872069500000002,
+        "gemm_launches": 6446,
+        "issued_flops": 1164673810432,
+        "launches": 24166,
+        "logical_flops": 1129728442368
+      },
+      "details": {
+        "loss": 4.217577427625656,
+        "parameters": 26472736,
+        "requests": 32,
+        "steps": 16
+      },
+      "mode": "value",
+      "peak_gpu_bytes": 999697168,
+      "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+      "seconds": 3.21853466
+    },
+    "time_reduction_fraction": 0.03027978173701873,
+    "logical_flop_reduction_fraction": 0.18891225153971414
+  },
+  "native_explicit_checkpoint_control": {
+    "counters": {
+      "attention_launches": 704,
+      "compilations": 0,
+      "compile_seconds": 0.10517275400000005,
+      "gemm_launches": 7548,
+      "issued_flops": 1432811470848,
+      "launches": 27394,
+      "logical_flops": 1392056991744
+    },
+    "details": {
+      "loss": 4.217218428850174,
+      "parameters": 26472736,
+      "requests": 32,
+      "steps": 16
+    },
+    "mode": "value",
+    "peak_gpu_bytes": 909963024,
+    "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+    "seconds": 3.25064133
+  },
+  "native_sgd_16_steps": {
+    "counters": {
+      "attention_launches": 576,
+      "compilations": 0,
+      "compile_seconds": 0.101945304,
+      "gemm_launches": 7473,
+      "issued_flops": 1212207857664,
+      "launches": 22292,
+      "logical_flops": 1169412849664
+    },
+    "details": {
+      "loss": 3.532719850540161,
+      "parameters": 26472736,
+      "requests": 32,
+      "steps": 16
+    },
+    "mode": "value",
+    "peak_gpu_bytes": 603006352,
+    "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+    "seconds": 2.848251679
+  },
+  "native_identical_gradient_update": {
+    "compact_update_seconds": 0.00307079,
+    "compressed_matrices": 44,
+    "dense_matrices": 127,
+    "materialized_update_seconds": 0.00420954,
+    "parameters": 26472736,
+    "reduction_comparison_budget": 0.00018504705345952143,
+    "scope": "one NativeValue backward, same gradients and initial weights; paired optimizer updates",
+    "weights_max_abs_error": 0.0,
+    "weights_relative_l2_error": 0.0
+  },
+  "native_adam_resume": {
+    "loss": 4.493353337049484,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "parameter_rng_equal": true,
+    "parameter_vjp": {
+      "block_rows": 32,
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "seed": 124
+    },
+    "probability_comparison_budget": 6.294646689111215e-05,
+    "reload_weights_max_abs_error": 0.0,
+    "resume_probability_max_abs_error": 0.0,
+    "resume_weights_max_abs_error": 7.450580596923828e-09,
+    "resumed_loss": 4.493353337049484,
+    "steps": 2
+  },
+  "native_sgd_resume": {
+    "loss": 3.9346876442432404,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "parameter_rng_equal": true,
+    "parameter_vjp": {
+      "block_rows": 32,
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "seed": 124
+    },
+    "probability_comparison_budget": 6.294646689111215e-05,
+    "reload_weights_max_abs_error": 0.0,
+    "resume_probability_max_abs_error": 0.0,
+    "resume_weights_max_abs_error": 7.450580596923828e-09,
+    "resumed_loss": 3.9346876442432404,
+    "steps": 2
+  },
+  "memory_contract": {
+    "checkpoint_restore": "exact_optimizer_rng_step_batch_config",
+    "declared_rows": 5,
+    "gpu_peak_bytes": 655260,
+    "maximum_tv": 8.326672684688674e-17,
+    "native_resume_max_delta": 0.0,
+    "query_resume_max_delta": 1.4901161193847656e-08,
+    "revision_resume": "identical",
+    "tokens": 129,
+    "zero_cadence": "final_checkpoint_saved"
+  },
+  "weight_comparisons": {
+    "memory_train": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 7.37607479095459e-07,
+        "relative_l2": 9.564967328183897e-08
+      }
+    },
+    "memory_baseline_repeat": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 7.450580596923828e-07,
+        "relative_l2": 8.949870470997858e-08
+      }
+    },
+    "revision_128": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    },
+    "file_cache": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    },
+    "fact_midpoint_resume": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    },
+    "revision_midpoint_resume": {
+      "weights.safetensors": {
+        "elements": 141384,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    },
+    "legacy_native_resume": {
+      "body/weights.safetensors": {
+        "elements": 26488192,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      },
+      "native.safetensors": {
+        "elements": 149024,
+        "max_abs": 7.450580596923828e-09,
+        "relative_l2": 1.8849144658988184e-09
+      }
+    }
+  },
+  "legacy_resume_execution": {
+    "native_execution": {
+      "activation_and_factor_bytes": 644318352,
+      "activation_checkpointing": true,
+      "batch": 8,
+      "gradient_and_cast_bytes": 201261696,
+      "optimizer": "adamw"
+    }
+  },
+  "file_cache_cleaned": true,
+  "native_64_step_trajectory": {
+    "before_loss": 2.3822942674160004,
+    "after_loss": 3.0220501124858856,
+    "comparison_scope": "same data, Adam and VJP policy; final loss values observed in two training runs",
+    "step8_rng_controls": {
+      "before-warm": {
+        "rng": 10222850926856141711,
+        "parameter_rng": 16390740445785211340,
+        "batch_size": 8,
+        "activation_checkpointing": null
+      },
+      "after-native": {
+        "rng": 10222850926856141711,
+        "parameter_rng": 16390740445785211340,
+        "batch_size": 8,
+        "activation_checkpointing": false
+      },
+      "after-checkpoint": {
+        "rng": 10222850926856141711,
+        "parameter_rng": 16390740445785211340,
+        "batch_size": 8,
+        "activation_checkpointing": true
+      }
+    },
+    "baseline_16_step_repeat_losses": [
+      4.217316180467606,
+      4.213468492031097
+    ],
+    "fixed_batch_followup": "same loss and VJP RNG; all gradients except native_embedding bit-identical; embedding atomic variation also occurs in repeated unchanged runs"
+  },
+  "native_fixed_batch_gradients": {
+    "batch": 8,
+    "compressed_checkpoint": {
+      "basis_groups": 2,
+      "checkpoint": true,
+      "compressed": true,
+      "compressed_matrices": 46,
+      "dense_matrices": 122,
+      "loss": 3.5425899624824524,
+      "parameter_rng": 4354685564936845478,
+      "projection_groups": 17
+    },
+    "compressed_checkpoint_repeat": {
+      "changed_parameters": [
+        {
+          "max_abs": 6.556510925292969e-07,
+          "name": "native_embedding",
+          "relative_l2": 1.3519297575680573e-07
+        }
+      ],
+      "max_abs": 6.556510925292969e-07,
+      "relative_l2": 5.0439405998059715e-08
+    },
+    "compressed_checkpoint_vs_retained": {
+      "changed_parameters": [
+        {
+          "max_abs": 4.172325134277344e-07,
+          "name": "native_embedding",
+          "relative_l2": 1.35462768889848e-07
+        }
+      ],
+      "max_abs": 4.172325134277344e-07,
+      "relative_l2": 5.0540063634278095e-08
+    },
+    "compressed_retained": {
+      "basis_groups": 2,
+      "checkpoint": false,
+      "compressed": true,
+      "compressed_matrices": 46,
+      "dense_matrices": 122,
+      "loss": 3.5425899624824524,
+      "parameter_rng": 4354685564936845478,
+      "projection_groups": 17
+    },
+    "dense_checkpoint": {
+      "basis_groups": 0,
+      "checkpoint": true,
+      "compressed": false,
+      "compressed_matrices": 0,
+      "dense_matrices": 0,
+      "loss": 3.5425899624824524,
+      "parameter_rng": null,
+      "projection_groups": 0
+    },
+    "dense_checkpoint_repeat": {
+      "changed_parameters": [
+        {
+          "max_abs": 3.5762786865234375e-07,
+          "name": "native_embedding",
+          "relative_l2": 1.296892497902748e-07
+        }
+      ],
+      "max_abs": 3.5762786865234375e-07,
+      "relative_l2": 5.0684419404889005e-08
+    },
+    "dense_checkpoint_vs_retained": {
+      "changed_parameters": [
+        {
+          "max_abs": 4.470348358154297e-07,
+          "name": "native_embedding",
+          "relative_l2": 1.3097996236204776e-07
+        }
+      ],
+      "max_abs": 4.470348358154297e-07,
+      "relative_l2": 5.1188848395146065e-08
+    },
+    "dense_retained": {
+      "basis_groups": 0,
+      "checkpoint": false,
+      "compressed": false,
+      "compressed_matrices": 0,
+      "dense_matrices": 0,
+      "loss": 3.5425899624824524,
+      "parameter_rng": null,
+      "projection_groups": 0
+    },
+    "parameters": 26472736
+  },
+  "native_scale_sgd_initial_f32_reservation": {
+    "counters": {
+      "attention_launches": 153,
+      "compilations": 23,
+      "compile_seconds": 3.3242776290000013,
+      "gemm_launches": 3029,
+      "issued_flops": 1939815198720,
+      "launches": 10289,
+      "logical_flops": 1882614067200
+    },
+    "details": {
+      "loss": 4.330808718999227,
+      "parameters": 291220000,
+      "requests": 32,
+      "steps": 3
+    },
+    "mode": "value",
+    "peak_gpu_bytes": 4884888768,
+    "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+    "seconds": 15.129698603,
+    "execution": {
+      "activation_and_factor_bytes": 4600280096,
+      "activation_checkpointing": false,
+      "batch": 6,
+      "gradient_and_cast_bytes": 2253960320,
+      "optimizer": "sgd"
+    },
+    "model": {
+      "id": "sejong-native-scale-benchmark",
+      "width": 1024,
+      "layers": 13,
+      "heads": 16,
+      "kv_heads": 8,
+      "ffn_width": 3072,
+      "context": 2048,
+      "precision": "f16",
+      "seed": 42,
+      "hierarchy": {
+        "patch_size": 8,
+        "encoder_width": 256,
+        "encoder_layers": 2,
+        "encoder_heads": 4,
+        "encoder_ffn_width": 768,
+        "decoder_width": 256,
+        "decoder_layers": 2,
+        "decoder_heads": 4,
+        "decoder_ffn_width": 768,
+        "local_window": 128,
+        "checkpoint_encoder": false,
+        "checkpoint_decoder": false
+      },
+      "experts": {
+        "count": 8,
+        "top_k": 2,
+        "ffn_width": 768
+      }
+    }
+  },
+  "native_scale_sgd": {
+    "counters": {
+      "attention_launches": 153,
+      "compilations": 0,
+      "compile_seconds": 0.09620651399999999,
+      "gemm_launches": 3076,
+      "issued_flops": 2456785059840,
+      "launches": 10350,
+      "logical_flops": 2391320690688
+    },
+    "details": {
+      "loss": 3.04212549328804,
+      "parameters": 291220000,
+      "requests": 32,
+      "steps": 3
+    },
+    "mode": "value",
+    "peak_gpu_bytes": 4941625600,
+    "scope": "complete training call including initialization, optimizer, checkpoint, calibration and model save",
+    "seconds": 12.693343664,
+    "execution": {
+      "activation_and_factor_bytes": 4381115232,
+      "activation_checkpointing": false,
+      "batch": 8,
+      "gradient_and_cast_bytes": 2253960320,
+      "optimizer": "sgd"
+    },
+    "model": {
+      "id": "sejong-native-scale-benchmark",
+      "width": 1024,
+      "layers": 13,
+      "heads": 16,
+      "kv_heads": 8,
+      "ffn_width": 3072,
+      "context": 2048,
+      "precision": "f16",
+      "seed": 42,
+      "hierarchy": {
+        "patch_size": 8,
+        "encoder_width": 256,
+        "encoder_layers": 2,
+        "encoder_heads": 4,
+        "encoder_ffn_width": 768,
+        "decoder_width": 256,
+        "decoder_layers": 2,
+        "decoder_heads": 4,
+        "decoder_ffn_width": 768,
+        "local_window": 128,
+        "checkpoint_encoder": false,
+        "checkpoint_decoder": false
+      },
+      "experts": {
+        "count": 8,
+        "top_k": 2,
+        "ffn_width": 768
+      }
+    },
+    "first_step_vjp": {
+      "parameter_vjp_statistics": {
+        "basis_groups": 2,
+        "compressed_matrices": 59,
+        "dense_matrices": 308,
+        "projection_groups": 21
+      },
+      "step": 1
+    }
+  }
+}

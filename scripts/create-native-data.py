@@ -47,6 +47,8 @@ def main():
     parser.add_argument('--ffn-width', type=int, default=288)
     parser.add_argument('--value-model-config', type=Path,
                         help='TOML model configuration for the native byte-value original')
+    parser.add_argument('--value-optimizer', choices=['adamw', 'sgd'],
+                        help='NativeValue optimizer; defaults to the supplied TOML optimizer or adamw')
     parser.add_argument('--steps', type=int, default=1200)
     parser.add_argument('--query-steps', type=int, default=1600)
     parser.add_argument('--lexical-steps', type=int, default=400)
@@ -61,13 +63,25 @@ def main():
     args = parser.parse_args()
     value_model = None
     value_parameter_vjp = None
+    value_execution = {}
+    value_batch = {}
     if args.value_model_config is not None:
         with args.value_model_config.open('rb') as source:
             value_config = tomllib.load(source)
             value_model = value_config.get('model')
-            value_parameter_vjp = value_config.get('training', {}).get('parameter_vjp')
+            training = value_config.get('training', {})
+            value_parameter_vjp = training.get('parameter_vjp')
+            value_execution['optimizer_kind'] = training.get('optimizer', 'adamw')
+            if 'activation_checkpointing' in training:
+                value_execution['activation_checkpointing'] = training['activation_checkpointing']
+            if 'batch' in training:
+                value_batch['max_examples'] = training['batch']
         if not isinstance(value_model, dict):
             parser.error('value-model-config requires a model table')
+    if args.value_optimizer is not None:
+        value_execution['optimizer_kind'] = args.value_optimizer
+    if value_execution.get('optimizer_kind', 'adamw') not in ('adamw', 'sgd'):
+        parser.error('NativeValue supports adamw or sgd; select --value-optimizer for this recipe')
     people, predicates = args.people, args.predicates
     n, p = len(people), len(predicates)
     if len(set(people + predicates)) != n + p:
@@ -228,7 +242,8 @@ def main():
         parser.error('native value context must cover each prompt with BOS and SEP')
     save(args.out / 'native-b.json', dict(model=value_model,
          requests=sites, prompts=prompts, values=items, labels=[(i + 1) % count for i in range(count)],
-         steps=args.fact_steps, learning_rate=args.learning_rate, checkpoint_every=args.checkpoint_every, optimizer={}, batch={},
+         steps=args.fact_steps, learning_rate=args.learning_rate, checkpoint_every=args.checkpoint_every, optimizer={}, batch=value_batch,
+         **value_execution,
          **({'parameter_vjp': value_parameter_vjp} if value_parameter_vjp is not None else {})))
     save(args.out / 'assembly.json', dict(scene='role-0/model', instruction='role-1/model', request='role-2/model',
          query='role-3/model', lexica=['role-4/model', 'role-5/model'], a={'kind': 'memory', 'path': 'a/model'},

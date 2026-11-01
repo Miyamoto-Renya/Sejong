@@ -247,6 +247,8 @@ fn main() -> Result<()> {
     )?;
     let mut value_spec = ValueTraining {
         parameter_vjp: None,
+        optimizer_kind: sejong_core::OptimizerKind::Adamw,
+        activation_checkpointing: None,
         model: ModelConfig {
             id: "sejong-native-resource-batch".into(),
             width: 8,

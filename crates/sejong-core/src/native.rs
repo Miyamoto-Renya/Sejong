@@ -343,6 +343,13 @@ pub fn softmax(logits: &[f64]) -> Result<Vec<f64>> {
 pub struct ValueTraining {
     #[serde(default)]
     pub optimizer: OptimizerPolicy,
+    #[serde(
+        default = "value_optimizer",
+        skip_serializing_if = "is_value_optimizer"
+    )]
+    pub optimizer_kind: crate::OptimizerKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation_checkpointing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parameter_vjp: Option<crate::ParameterVjpConfig>,
     #[serde(default)]
@@ -358,6 +365,12 @@ pub struct ValueTraining {
     pub resume: Option<PathBuf>,
     #[serde(default = "default_checkpoint")]
     pub checkpoint_every: usize,
+}
+fn value_optimizer() -> crate::OptimizerKind {
+    crate::OptimizerKind::Adamw
+}
+fn is_value_optimizer(value: &crate::OptimizerKind) -> bool {
+    *value == value_optimizer()
 }
 pub fn inventory_bytes(xs: &[ByteValue], name: &str) -> Result<()> {
     let set: std::collections::BTreeSet<_> = xs.iter().collect();

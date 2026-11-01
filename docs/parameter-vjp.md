@@ -70,9 +70,9 @@ target/release/sejong generate --model runs/sejong-parameter/model \
   --prompt 'Sejong' --max-bytes 128
 ```
 
-NativeValue의 `ValueTraining.parameter_vjp`도 같은 Graph와 잔차 연산을 사용한다. 기존 NativeValue Adam 경로는 optimizer 경계에서 해당 미분을 dense buffer로 합산한 뒤 원소별 moments를 갱신한다. `GradientMaterializer`가 gradient buffer를 별도로 소유하고, 원래 가중치는 Adam 갱신에서 사용한다. Native checkpoint의 `parameter_rng`가 미분 표집 상태를 보존한다. 기존 spec의 생략 필드는 기존 학습 설정을 따른다.
+NativeValue의 `ValueTraining.parameter_vjp`도 같은 Graph와 잔차 연산을 사용한다. `optimizer_kind=sgd`는 같은 `GradientPlan`으로 인수와 선택 행을 직접 가중치에 합산한다. 기본 `adamw`는 optimizer 경계에서 gradient를 dense buffer로 합산한 뒤 원소별 moments를 갱신한다. Native checkpoint의 `parameter_rng`와 `activation_checkpointing`은 미분 표집 상태와 활성값 보존 정책을 보존한다.
 
-자료 생성기에 TOML을 전달하면 model 표와 `training.parameter_vjp`가 `native-b.json`에 들어간다.
+자료 생성기에 TOML을 전달하면 model 표와 `training.parameter_vjp`, optimizer 종류, activation checkpoint 설정, 물리 batch 상한이 `native-b.json`에 들어간다. `--value-optimizer adamw|sgd`로 원본의 optimizer 종류를 명시할 수 있다. 학습 횟수·학습률·optimizer 세부 정책은 Native 규격을 따른다.
 
 ```bash
 python scripts/create-native-data.py --out data/native-parameter \

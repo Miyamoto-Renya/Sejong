@@ -11,7 +11,10 @@ Native graph는 로컬 의미 학습, 조건부 프로그램 해석, 원본의 f
 | 로컬 파서 학습 | `crates/sejong-train/src/roles.rs` | 정답 CE, 좌표 정렬 JS, softplus 대비, 실제 배치와 optimizer·RNG 재개 |
 | Native 사실 값 | `crates/sejong-model/src/native/value.rs` | 요청 SEP hidden의 value head와 값 분포 |
 | Memory 원본 | `crates/sejong-model/src/native/memory.rs` | 설정 기반 query 본체·K/V·prototype readout, 스트리밍 QR 입구 피팅, 선언 행의 FP64 full/direct 보정 |
-| Memory 학습·개정 | `crates/sejong-train/src/memory.rs` | 선언한 손실·배경·optimizer 정책, 메모리에 맞춘 청크 계산, K/V 학습과 재개 |
+| Memory 학습·개정 | `crates/sejong-train/src/memory.rs` | 선언한 손실·배경·optimizer 정책, 고정 query 재사용, K/V 학습과 재개 |
+| 고정 query 캐시 | `crates/sejong-train/src/memory/query_cache.rs` | 예산에 따른 GPU 저장·임시 파일 스트리밍, query 생성과 fact 배치의 독립 계산 |
+| NativeValue 실행 계획 | `crates/sejong-train/src/value_execution.rs` | 계층·GQA·전문가별 작업 공간, gradient 저장량, 활성값 보존·재계산과 실제 batch 선택 |
+| NativeValue 갱신 | `crates/sejong-train/src/memory.rs` | 압축 gradient 직접 SGD 또는 dense Adam, 실행 정책·RNG를 포함한 재개 |
 | 의미 quotient | `crates/sejong-runtime/src/native/semantic.rs` | 개체 N명에 대해 2N개 채널과 160N개 충분 상태 |
 | 어휘 last-use | `crates/sejong-runtime/src/native/lexical.rs` | 반복 의미 선택 공유, 마지막 사용에서 상태 합산, 살아 있는 선택의 바이트 예산 |
 | 사건 실행 | `crates/sejong-runtime/src/native/events.rs` | N²+NONE 사건, 분리된 술어의 scan kernel, 재진입의 공유 선택 MDD |

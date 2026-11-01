@@ -200,9 +200,14 @@ impl Memory {
                 weight("anorm.bias"),
                 c.norm_epsilon,
             )?;
-            let q = g.affine(h, weight("q.weight"), weight("q.bias"))?;
-            let k = g.matmul(h, weight("k.weight"))?;
-            let v = g.affine(h, weight("v.weight"), weight("v.bias"))?;
+            let (q, k, v) = g.project_qkv(
+                h,
+                weight("q.weight"),
+                weight("k.weight"),
+                weight("v.weight"),
+            )?;
+            let q = g.bias(q, weight("q.bias"))?;
+            let v = g.bias(v, weight("v.bias"))?;
             let a = g.attention_mode(q, k, v, c.tokens, c.heads, false)?;
             let a = g.affine(a, weight("o.weight"), weight("o.bias"))?;
             let attention_state = g.add(x, a)?;
