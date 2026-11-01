@@ -4,6 +4,7 @@ use sejong_core::{
     Config, ControlSampling, DType, Error, Manifest, OptimizerKind, Result, Rng, TrainConfig,
     ensure, json,
 };
+use sejong_gpu::parameter_vjp::{GradientPlan, ParameterGradient, VjpStatistics};
 use sejong_gpu::{Engine, Tensor, graph::Graph};
 use sejong_model::{LowRankCorrection, Model, load_tensors};
 use std::{collections::BTreeMap, io::Write, path::Path, time::Instant};
@@ -24,6 +25,7 @@ struct SgdState {
     blocks: Vec<PredictorBlock>,
     sampling_rng: Rng,
     basis_rng: Rng,
+    parameter_rng: Option<Rng>,
 }
 
 fn predicted_parameter(name: &str, shape: &[usize]) -> bool {
@@ -68,6 +70,7 @@ impl SgdState {
             blocks: vec![],
             sampling_rng: Rng::new(config.seed ^ 0x38b8_7c4d_9f0a_1265),
             basis_rng: Rng::new(config.seed ^ 0xa412_39c5_07ef_68bd),
+            parameter_rng: config.parameter_vjp.as_ref().map(|p| Rng::new(p.seed)),
         };
         if config.optimizer == OptimizerKind::ControlVariateSgd {
             let rank = config.control_variate.as_ref().unwrap().rank;
@@ -80,7 +83,7 @@ impl SgdState {
                 };
                 ensure(
                     rank <= a.min(b),
-                    format!(
+                    format_args!(
                         "predictor rank {rank} exceeds matrix dimensions of {}",
                         parameter.name
                     ),
@@ -134,6 +137,11 @@ impl SgdState {
             blocks: vec![],
             sampling_rng: read_rng(engine, &tensors, "sgd.sampling_rng")?,
             basis_rng: read_rng(engine, &tensors, "sgd.basis_rng")?,
+            parameter_rng: config
+                .parameter_vjp
+                .as_ref()
+                .map(|_| read_rng(engine, &tensors, "sgd.parameter_rng"))
+                .transpose()?,
         };
         let version = tensors
             .get("sgd.version")
@@ -158,7 +166,7 @@ impl SgdState {
                         .ok_or_else(|| Error::Message(format!("missing optimizer tensor {key}")))?;
                     ensure(
                         tensor.shape == shape && tensor.dtype == DType::F32,
-                        format!("optimizer tensor shape/dtype mismatch: {key}"),
+                        format_args!("optimizer tensor shape/dtype mismatch: {key}"),
                     )?;
                     Ok(tensor.clone())
                 };
@@ -178,7 +186,8 @@ impl SgdState {
             }
         }
         ensure(
-            tensors.len() == 3 + 4 * state.blocks.len(),
+            tensors.len()
+                == 3 + 4 * state.blocks.len() + usize::from(state.parameter_rng.is_some()),
             "SGD checkpoint tensor count differs from its configuration",
         )?;
         Ok(state)
@@ -204,6 +213,9 @@ impl SgdState {
             rng_tensor(engine, &self.sampling_rng)?,
         );
         out.insert("sgd.basis_rng".into(), rng_tensor(engine, &self.basis_rng)?);
+        if let Some(rng) = &self.parameter_rng {
+            out.insert("sgd.parameter_rng".into(), rng_tensor(engine, rng)?);
+        }
         for block in &self.blocks {
             for (suffix, tensor) in [
                 ("left", &block.left),
@@ -399,6 +411,16 @@ pub fn train(
     output: &Path,
     resume: Option<&Path>,
 ) -> Result<TrainingSummary> {
+    let corpus = Corpus::open(data)?;
+    train_configured(config, &corpus, output, resume, false)
+}
+pub(crate) fn train_configured(
+    config: &Config,
+    corpus: &Corpus,
+    output: &Path,
+    resume: Option<&Path>,
+    metrics: bool,
+) -> Result<TrainingSummary> {
     let complete_started = Instant::now();
     config.model.validate()?;
     config.training.validate(&config.model)?;
@@ -412,14 +434,14 @@ pub fn train(
     )?;
     ensure(
         !output.exists(),
-        format!("training destination already exists: {}", output.display()),
+        format_args!("training destination already exists: {}", output.display()),
     )?;
-    let corpus = Corpus::open(data)?;
     ensure(
         corpus.tokens > tc.sequence,
         "corpus is shorter than the training sequence",
     )?;
     let mut engine = Engine::new(config.gpu.clone())?;
+    engine.enable_execution_metrics(metrics);
     let (model, mut state, mut data_rng) = if let Some(directory) = resume {
         let (model, manifest) = Model::load(&mut engine, directory)?;
         ensure(
@@ -462,11 +484,23 @@ pub fn train(
     )?;
     std::fs::create_dir_all(output)?;
     std::fs::write(output.join("config.json"), json::to_vec_pretty(config)?)?;
-    let mut log = std::fs::File::create(output.join("metrics.jsonl"))?;
+    let mut log = std::io::BufWriter::new(std::fs::File::create(output.join("metrics.jsonl"))?);
     let started = Instant::now();
+    let compact_plan = if tc.parameter_vjp.is_some() {
+        Some(GradientPlan::new(
+            &mut engine,
+            &model
+                .parameters
+                .iter()
+                .map(|p| p.value.clone())
+                .collect::<Vec<_>>(),
+        )?)
+    } else {
+        None
+    };
     let mut last_loss = 0.;
+    engine.synchronize()?;
     while state.step < tc.steps {
-        engine.synchronize()?;
         let before = engine.execution_counters();
         let step_started = Instant::now();
         let observations: Vec<Observation> = (0..tc.accumulation)
@@ -480,16 +514,19 @@ pub fn train(
         let controls = weights.iter().filter(|&&w| w > 0.).count();
         let corrections = state.corrections();
         let mut gradients = vec![None; model.parameters.len()];
+        let mut compact_gradients = vec![ParameterGradient::default(); model.parameters.len()];
+        let mut vjp_statistics = VjpStatistics::default();
         let mut mean_predictions: Vec<Option<Tensor>> = vec![None; state.blocks.len()];
         let mut control_predictions: Vec<Option<Tensor>> = vec![None; state.blocks.len()];
         let mut mean_targets: Vec<Option<Tensor>> = vec![None; state.blocks.len()];
         let mut predictor_gradients: Vec<Option<Tensor>> = vec![None; state.blocks.len()];
-        let mut loss = 0.;
+        let loss_summaries = engine.empty(&[controls], DType::F64)?;
         let mut gradient_second_moment = 0.;
         let mut residual_second_moment = 0.;
         let mut predictor_mse = 0.;
         let diagnostics = tc.gradient_diagnostics_every > 0
             && (state.step + 1).is_multiple_of(tc.gradient_diagnostics_every);
+        let measure_gradient = tc.clip_enabled || diagnostics;
         let mut diagnostic_seconds = 0.;
         let refreshed = !state.blocks.is_empty()
             && (state.step + 1).is_multiple_of(tc.control_variate.as_ref().unwrap().basis_refresh);
@@ -500,6 +537,12 @@ pub fn train(
             let ids = engine.from_i32(&[observation.input.len()], &observation.input)?;
             let mut graph = Graph::new(&mut engine, control);
             graph.checkpointing = tc.activation_checkpointing && control;
+            if let Some(policy) = &tc.parameter_vjp {
+                graph.configure_parameter_vjp(
+                    policy.clone(),
+                    state.parameter_rng.as_ref().unwrap().clone(),
+                )?;
+            }
             let binding = if control {
                 model.bind_with_corrections(&mut graph, true, &corrections)?
             } else {
@@ -508,6 +551,7 @@ pub fn train(
             let encoded = model.encode(&mut graph, &binding, &ids, tc.sequence, None)?;
             let feature_tensor = graph.tensor(encoded).clone();
             let mut current_gradients = vec![];
+            let mut current_compact = Vec::new();
             let mut targets = vec![];
             if control {
                 let labels = graph
@@ -516,16 +560,29 @@ pub fn train(
                 let logits =
                     model.logits_from_encoded(&mut graph, &binding, encoded, tc.sequence)?;
                 let objective = graph.cross_entropy(logits, &labels)?;
-                let values = graph.value(objective)?;
-                let value = values.iter().map(|&v| v as f64).sum::<f64>() / values.len() as f64;
-                ensure(value.is_finite(), "nonfinite control loss")?;
-                loss += control_weight as f64 * value;
+                let objective_tensor = graph.tensor(objective).clone();
+                graph.engine.loss_summary(
+                    &objective_tensor,
+                    &loss_summaries,
+                    control_number,
+                    control_weight,
+                )?;
                 graph.backward(&[(objective, tc.loss_scale)])?;
-                current_gradients = binding
-                    .leaves
-                    .iter()
-                    .map(|&leaf| graph.gradient(leaf).cloned())
-                    .collect();
+                if tc.parameter_vjp.is_some() {
+                    current_compact = binding
+                        .leaves
+                        .iter()
+                        .map(|&v| graph.parameter_gradient(v))
+                        .collect();
+                    state.parameter_rng = graph.parameter_vjp_rng();
+                    vjp_statistics.add(graph.parameter_vjp_statistics());
+                } else {
+                    current_gradients = binding
+                        .leaves
+                        .iter()
+                        .map(|&leaf| graph.gradient(leaf).cloned())
+                        .collect();
+                }
                 targets = state
                     .blocks
                     .iter()
@@ -551,14 +608,32 @@ pub fn train(
             };
             let mut sample_norm = 0.;
             if control {
+                if let Some(plan) = &compact_plan {
+                    if diagnostics {
+                        let diagnostic_started = Instant::now();
+                        let packed = plan.pack(&mut engine, &current_compact)?;
+                        sample_norm = plan.norm(&mut engine, &packed)?.powi(2)
+                            / (tc.loss_scale as f64).powi(2);
+                        diagnostic_seconds += diagnostic_started.elapsed().as_secs_f64();
+                    }
+                    for (destination, incoming) in
+                        compact_gradients.iter_mut().zip(&current_compact)
+                    {
+                        destination.accumulate(
+                            &mut engine,
+                            incoming,
+                            control_weight / tc.loss_scale,
+                        )?;
+                    }
+                }
+                if diagnostics && compact_plan.is_none() {
+                    let diagnostic_started = Instant::now();
+                    sample_norm = engine.gradient_norm(&current_gradients)?.powi(2)
+                        / (tc.loss_scale as f64).powi(2);
+                    diagnostic_seconds += diagnostic_started.elapsed().as_secs_f64();
+                }
                 for (destination, gradient) in gradients.iter_mut().zip(&current_gradients) {
                     if let Some(gradient) = gradient {
-                        if diagnostics {
-                            let diagnostic_started = Instant::now();
-                            sample_norm +=
-                                engine.squared_norm(gradient)? / (tc.loss_scale as f64).powi(2);
-                            diagnostic_seconds += diagnostic_started.elapsed().as_secs_f64();
-                        }
                         accumulate(
                             &mut engine,
                             destination,
@@ -610,7 +685,9 @@ pub fn train(
                         ))
                     })?;
                     let target = engine.scale(target, 1. / tc.loss_scale)?;
-                    accumulate(&mut engine, &mut mean_targets[j], &target, control_weight)?;
+                    if measure_gradient {
+                        accumulate(&mut engine, &mut mean_targets[j], &target, control_weight)?;
+                    }
                     accumulate(
                         &mut engine,
                         &mut control_predictions[j],
@@ -642,64 +719,82 @@ pub fn train(
             }
         }
         drop(corrections);
-        let mut base_norm = 0.;
-        for gradient in gradients.iter().flatten() {
-            base_norm += engine.squared_norm(gradient)?;
+        let loss = engine.to_f64(&loss_summaries)?.iter().sum::<f64>();
+        let mut base_norm = if measure_gradient && compact_plan.is_none() {
+            engine.gradient_norm(&gradients)?.powi(2)
+        } else {
+            0.
+        };
+        let compact_packed = compact_plan
+            .as_ref()
+            .map(|plan| plan.pack(&mut engine, &compact_gradients))
+            .transpose()?;
+        if measure_gradient {
+            if let (Some(plan), Some(packed)) = (&compact_plan, &compact_packed) {
+                base_norm = plan.norm(&mut engine, packed)?.powi(2);
+            }
         }
         let mut norm_squared = base_norm;
         let mut residual_mean_norm = base_norm;
         let mut deltas = vec![];
         for (j, block) in state.blocks.iter().enumerate() {
             let control = control_predictions[j].as_ref().unwrap();
-            let target = mean_targets[j].as_ref().unwrap();
+
             let delta = engine.add(
                 mean_predictions[j].as_ref().unwrap(),
                 control,
                 -1.,
                 DType::F32,
             )?;
-            norm_squared +=
-                correction_norm(&mut engine, block, &delta)? + 2. * engine.dot(target, &delta)?;
+            if measure_gradient {
+                let target = mean_targets[j].as_ref().unwrap();
+                norm_squared += correction_norm(&mut engine, block, &delta)?
+                    + 2. * engine.dot(target, &delta)?;
+            }
             if diagnostics {
                 let diagnostic_started = Instant::now();
                 residual_mean_norm += correction_norm(&mut engine, block, control)?
-                    - 2. * engine.dot(target, control)?;
+                    - 2. * engine.dot(mean_targets[j].as_ref().unwrap(), control)?;
                 diagnostic_seconds += diagnostic_started.elapsed().as_secs_f64();
             }
             deltas.push(delta);
         }
-        ensure(
-            norm_squared.is_finite() && (!diagnostics || predictor_mse.is_finite()),
-            "nonfinite SGD gradient or predictor error; update aborted",
-        )?;
-        let norm = norm_squared.max(0.).sqrt();
-        let clipping = if tc.clip_enabled && norm > tc.clip_norm as f64 {
-            tc.clip_norm as f64 / norm
-        } else {
-            1.
-        } as f32;
+        let norm = measure_gradient.then(|| norm_squared.max(0.).sqrt());
+        let clipping = norm
+            .filter(|n| tc.clip_enabled && *n > tc.clip_norm as f64)
+            .map_or(1., |n| tc.clip_norm as f64 / n) as f32;
         let learning_rate = tc.lr(state.step);
-        for (parameter, gradient) in model.parameters.iter().zip(&gradients) {
-            let decay = if parameter.value.shape.len() > 1 {
-                1. - learning_rate * tc.weight_decay
-            } else {
-                1.
-            };
-            if decay != 1. {
-                engine.add_into(
-                    &parameter.value,
-                    &parameter.value,
-                    &parameter.value,
-                    decay - 1.,
-                )?;
-            }
-            if let Some(gradient) = gradient {
-                engine.add_into(
-                    &parameter.value,
-                    gradient,
-                    &parameter.value,
-                    -learning_rate * clipping,
-                )?;
+        if let (Some(plan), Some(packed)) = (&compact_plan, &compact_packed) {
+            plan.update(
+                &mut engine,
+                packed,
+                learning_rate,
+                clipping,
+                tc.weight_decay,
+            )?;
+        } else {
+            for (parameter, gradient) in model.parameters.iter().zip(&gradients) {
+                let decay = if parameter.value.shape.len() > 1 {
+                    1. - learning_rate * tc.weight_decay
+                } else {
+                    1.
+                };
+                if decay != 1. {
+                    engine.add_into(
+                        &parameter.value,
+                        &parameter.value,
+                        &parameter.value,
+                        decay - 1.,
+                    )?;
+                }
+                if let Some(gradient) = gradient {
+                    engine.add_into(
+                        &parameter.value,
+                        gradient,
+                        &parameter.value,
+                        -learning_rate * clipping,
+                    )?;
+                }
             }
         }
         for ((block, delta), predictor_gradient) in state
@@ -738,26 +833,27 @@ pub fn train(
         let counters = engine.execution_counters().difference(&before);
         let gradient_dispersion = (gradient_second_moment - base_norm).max(0.);
         let residual_dispersion = (residual_second_moment - residual_mean_norm).max(0.);
-        let record = json::json!({
-            "step":state.step,"optimizer":tc.optimizer,"loss":loss,"loss_estimator":"weighted_control_mean",
-            "gradient_norm":norm,"learning_rate":learning_rate,"step_seconds":step_seconds,
-            "elapsed_seconds":started.elapsed().as_secs_f64(),"observed_bytes":tc.accumulation*tc.batch*tc.sequence,
-            "exact_bytes":controls*tc.batch*tc.sequence,"controls":controls,"basis_refreshed":refreshed,
-            "basis_source":if controls>1 {"control_gradient_contrast"} else {"control_gradient"},
-            "gradient_diagnostics":diagnostics,"diagnostic_seconds":diagnostics.then_some(diagnostic_seconds),
-            "predictor_mse":diagnostics.then_some(predictor_mse),
-            "control_gradient_dispersion":diagnostics.then_some(gradient_dispersion),
-            "control_residual_dispersion":diagnostics.then_some(residual_dispersion),
-            "residual_variance_ratio_diagnostic":if diagnostics && controls>1 && gradient_dispersion>0. {Some(residual_dispersion/gradient_dispersion)} else {None},
-            "peak_gpu_mib":engine.peak_bytes()/1048576,"counters":{
-                "launches":counters.launches,"logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,
-                "gemm_launches":counters.gemm_launches,"attention_launches":counters.attention_launches,
-                "compilations":counters.compilations,"compile_seconds":counters.compile_seconds
-            }
-        });
-        writeln!(log, "{record}")?;
-        log.flush()?;
         if state.step == 1 || state.step.is_multiple_of(tc.log_every) || state.step == tc.steps {
+            let record = json::json!({
+                "step":state.step,"optimizer":tc.optimizer,"loss":loss,"loss_estimator":"weighted_control_mean",
+                "gradient_norm":norm,
+                "parameter_vjp":tc.parameter_vjp,"parameter_vjp_statistics":{
+                    "compressed_matrices":vjp_statistics.compressed_matrices,"dense_matrices":vjp_statistics.dense_matrices,
+                    "basis_groups":vjp_statistics.basis_groups,
+                    "projection_groups":vjp_statistics.projection_groups},
+                "learning_rate":learning_rate,"step_seconds":step_seconds,
+                "elapsed_seconds":started.elapsed().as_secs_f64(),"observed_bytes":tc.accumulation*tc.batch*tc.sequence,
+                "exact_bytes":if vjp_statistics.compressed_matrices>0{None}else{Some(controls*tc.batch*tc.sequence)},
+                "backward_bytes":controls*tc.batch*tc.sequence,"controls":controls,"basis_refreshed":refreshed,
+                "basis_source":if controls>1 {"control_gradient_contrast"} else {"control_gradient"},
+                "gradient_diagnostics":diagnostics,"diagnostic_seconds":diagnostics.then_some(diagnostic_seconds),
+                "predictor_mse":diagnostics.then_some(predictor_mse),
+                "control_gradient_dispersion":diagnostics.then_some(gradient_dispersion),
+                "control_residual_dispersion":diagnostics.then_some(residual_dispersion),
+                "residual_variance_ratio_diagnostic":if diagnostics && controls>1 && gradient_dispersion>0. {Some(residual_dispersion/gradient_dispersion)} else {None},
+                "peak_gpu_mib":engine.peak_bytes()/1048576,"counters":crate::counter_metrics(&engine,&counters)
+            });
+            writeln!(log, "{record}")?;
             eprintln!("{record}");
         }
         last_loss = loss;
@@ -779,6 +875,7 @@ pub fn train(
             )?;
         }
     }
+    log.flush()?;
     let directory = output.join("model");
     save(
         &mut state,

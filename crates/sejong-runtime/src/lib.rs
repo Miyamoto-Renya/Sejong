@@ -29,6 +29,10 @@ pub fn sample(logits: &[f32], options: &Sampling, rng: &mut Rng) -> Result<i32> 
         !logits.is_empty() && logits.iter().all(|v| v.is_finite()),
         "sampling requires finite logits",
     )?;
+    validate_sampling(options)?;
+    sample_prepared(logits, options, rng)
+}
+fn validate_sampling(options: &Sampling) -> Result<()> {
     ensure(
         options.temperature.is_finite()
             && options.temperature >= 0.
@@ -36,6 +40,9 @@ pub fn sample(logits: &[f32], options: &Sampling, rng: &mut Rng) -> Result<i32> 
             && options.top_p <= 1.,
         "sampling requires temperature >= 0 and top_p in (0, 1]",
     )?;
+    Ok(())
+}
+fn sample_prepared(logits: &[f32], options: &Sampling, rng: &mut Rng) -> Result<i32> {
     let mut ranked: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
     ranked.sort_by(|a, b| b.1.total_cmp(&a.1));
     if options.temperature == 0. {
@@ -81,6 +88,7 @@ pub fn generate(
     options: &Sampling,
     mut emit: impl FnMut(u8) -> Result<()>,
 ) -> Result<Generation> {
+    validate_sampling(options)?;
     let weights = model.inference_weights(engine)?;
     let mut cache = model.new_cache(engine)?;
     let mut tokens = vec![EOS];
@@ -93,7 +101,7 @@ pub fn generate(
     let mut bytes = vec![];
     for index in 0..options.max_bytes {
         let scores = engine.to_f32(&logits)?;
-        let token = sample(&scores, options, &mut rng)?;
+        let token = sample_prepared(&scores, options, &mut rng)?;
         if token == EOS {
             return Ok(Generation { bytes, ended: true });
         }

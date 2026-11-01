@@ -19,6 +19,10 @@ def compile_request(request):
         module=importlib.import_module('sejong_kernels.ops.parser')
     elif operation.startswith('hierarchy_'):
         module=importlib.import_module('sejong_kernels.ops.hierarchy')
+    elif operation.startswith('parameter_'):
+        module=importlib.import_module('sejong_kernels.ops.parameter')
+    elif operation.startswith('projection_'):
+        module=importlib.import_module('sejong_kernels.ops.projection')
     elif hasattr(common,operation): module=common
     else: module=kernels
     source_digest = hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()

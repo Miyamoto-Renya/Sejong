@@ -1,0 +1,13 @@
+[
+  {
+    "name": "dot2-b8",
+    "batch": 8,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain-b8.toml",
+    "executable": "/home/renya/Sejong/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/dot2-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/dot2-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  }
+]

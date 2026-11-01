@@ -60,9 +60,12 @@ def main():
     parser.add_argument('--seed', type=int, default=99271)
     args = parser.parse_args()
     value_model = None
+    value_parameter_vjp = None
     if args.value_model_config is not None:
         with args.value_model_config.open('rb') as source:
-            value_model = tomllib.load(source).get('model')
+            value_config = tomllib.load(source)
+            value_model = value_config.get('model')
+            value_parameter_vjp = value_config.get('training', {}).get('parameter_vjp')
         if not isinstance(value_model, dict):
             parser.error('value-model-config requires a model table')
     people, predicates = args.people, args.predicates
@@ -225,7 +228,8 @@ def main():
         parser.error('native value context must cover each prompt with BOS and SEP')
     save(args.out / 'native-b.json', dict(model=value_model,
          requests=sites, prompts=prompts, values=items, labels=[(i + 1) % count for i in range(count)],
-         steps=args.fact_steps, learning_rate=args.learning_rate, checkpoint_every=args.checkpoint_every, optimizer={}, batch={}))
+         steps=args.fact_steps, learning_rate=args.learning_rate, checkpoint_every=args.checkpoint_every, optimizer={}, batch={},
+         **({'parameter_vjp': value_parameter_vjp} if value_parameter_vjp is not None else {})))
     save(args.out / 'assembly.json', dict(scene='role-0/model', instruction='role-1/model', request='role-2/model',
          query='role-3/model', lexica=['role-4/model', 'role-5/model'], a={'kind': 'memory', 'path': 'a/model'},
          b={'kind': 'memory', 'path': 'b/model'}, catalog=catalog, budgets={}))

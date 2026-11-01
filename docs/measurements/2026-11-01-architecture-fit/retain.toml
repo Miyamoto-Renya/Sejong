@@ -1,0 +1,67 @@
+# Sejong 기본 구성: 계층·GQA·전문가 본체와 순전파 기저·잔차 parameter VJP.
+[model]
+id = "sejong"
+width = 512
+layers = 8
+heads = 8
+kv_heads = 4
+ffn_width = 1536
+context = 2048
+precision = "f16"
+seed = 42
+
+# 각 local stage의 폭은 global의 1/4, head 폭은 global과 같은 64다.
+# P8은 연구의 첫 압축 후보이며 benchmark에서 P4/P16과 비교할 수 있다.
+[model.hierarchy]
+patch_size = 8
+encoder_width = 128
+encoder_layers = 2
+encoder_heads = 2
+encoder_ffn_width = 384
+decoder_width = 128
+decoder_layers = 2
+decoder_heads = 2
+decoder_ffn_width = 384
+local_window = 128
+checkpoint_encoder = false
+checkpoint_decoder = false
+
+# FFN의 총 내부 폭 1536 = 4 * 384를 유지하고 위치마다 절반을 실행한다.
+[model.experts]
+count = 4
+top_k = 2
+ffn_width = 384
+
+[training]
+gradient_diagnostics_every = 0
+optimizer = "sgd"
+clip_enabled = false
+activation_checkpointing = false
+steps = 10000
+sequence = 512
+batch = 1
+accumulation = 8
+learning_rate = 0.0003
+min_learning_rate = 0.00003
+warmup_steps = 100
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.0
+clip_norm = 1.0
+loss_scale = 1.0
+checkpoint_every = 500
+log_every = 10
+seed = 123
+
+[training.parameter_vjp]
+rank = 16
+residual_fraction = 0.25
+block_rows = 32
+seed = 124
+
+[gpu]
+device = 0
+architecture = "gfx1032"
+wavefront = 32
+memory_mb = 0
+

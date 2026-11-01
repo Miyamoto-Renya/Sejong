@@ -1,0 +1,58 @@
+{
+  "rms_norm_backward_calls_per_step": 224,
+  "rms_fp32_atomic_updates_per_step": 11796480,
+  "attention_delta_scalar_ops_saved": 601862144,
+  "attention_delta_counter_flops_saved": 606601216,
+  "attention_delta_raw_load_store_bytes_saved": 587382784,
+  "resources": [
+    {
+      "kernel": "rms-base-512",
+      "vgprs": 21,
+      "sgprs": 18,
+      "private_bytes": 0,
+      "static_cas": 4
+    },
+    {
+      "kernel": "rms-part-512-4",
+      "vgprs": 67,
+      "sgprs": 18,
+      "private_bytes": 0,
+      "static_cas": 0
+    },
+    {
+      "kernel": "rms-part-128-8",
+      "vgprs": 60,
+      "sgprs": 42,
+      "private_bytes": 0,
+      "static_cas": 0
+    },
+    {
+      "kernel": "rms-part-512-16",
+      "vgprs": 256,
+      "sgprs": 43,
+      "private_bytes": 0,
+      "static_cas": 0
+    },
+    {
+      "kernel": "rms-final-64-512-4",
+      "vgprs": 11,
+      "sgprs": 9,
+      "private_bytes": 0,
+      "static_cas": 0
+    },
+    {
+      "kernel": "rms-final-512-128-8",
+      "vgprs": 24,
+      "sgprs": 9,
+      "private_bytes": 0,
+      "static_cas": 0
+    },
+    {
+      "kernel": "rms-final-1024-512-16",
+      "vgprs": 24,
+      "sgprs": 9,
+      "private_bytes": 0,
+      "static_cas": 0
+    }
+  ]
+}

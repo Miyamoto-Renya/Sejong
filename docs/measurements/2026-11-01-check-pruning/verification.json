@@ -1,0 +1,174 @@
+{
+  "gpu": "AMD Radeon RX 6600",
+  "cpu": {
+    "command": "cargo test --workspace --lib --locked",
+    "passed": 5
+  },
+  "build": {
+    "command": "cargo check --workspace --all-targets --locked --features sejong-gpu/kernel-profile",
+    "exit_code": 0
+  },
+  "attention_closed_form": {
+    "reference": "enumeration of the prior position loop",
+    "shape_cases": 3240,
+    "equal": true
+  },
+  "kernel": {
+    "basis_orthogonality_max_abs_error": 1.8861658390711966e-07,
+    "dense_term": true,
+    "device": "AMD Radeon RX 6600",
+    "factored_terms": 2,
+    "gradient_norm": 10.789399871779699,
+    "large_gradient_norm": 6.805646932770577e+38,
+    "large_gradient_update_finite": true,
+    "mixed_precision_norm": 70.48188170355333,
+    "rank": 33,
+    "roundoff_budget": 0.0005473508588184258,
+    "second_rank": 17,
+    "sgd_max_abs_error": 2.3896324641281552e-08,
+    "sgd_relative_squared_error": 1.3621234413838095e-15,
+    "shape": [
+      67,
+      71,
+      97
+    ],
+    "vjp_max_abs_error": 2.117675904911298e-07,
+    "vjp_relative_squared_error": 5.908397371719329e-14
+  },
+  "byte": {
+    "continuous_loss": 6.089361780846957,
+    "directory": ".cache/check-pruning/byte",
+    "full_coverage_sgd_max_abs_error": 4.656612873077393e-10,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "resume_optimizer_rng_max_abs_error": 0.0,
+    "resume_roundoff_budget": 7.152588068515015e-07,
+    "resume_weights_max_abs_error": 2.842170943040401e-14,
+    "resumed_loss": 6.089361780846957,
+    "steps": 6
+  },
+  "native_value": {
+    "loss": 4.645290456712246,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "parameter_rng_equal": true,
+    "parameter_vjp": {
+      "block_rows": 32,
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "seed": 124
+    },
+    "probability_comparison_budget": 6.294646689111215e-05,
+    "reload_weights_max_abs_error": 0.0,
+    "resume_probability_max_abs_error": 0.0,
+    "resume_weights_max_abs_error": 5.960464477539063e-08,
+    "resumed_loss": 4.645290456712246,
+    "steps": 2
+  },
+  "memory": {
+    "checkpoint_restore": "exact_optimizer_rng_step_batch_config",
+    "declared_rows": 5,
+    "gpu_peak_bytes": 655260,
+    "maximum_tv": 5.551115123125783e-17,
+    "native_resume_max_delta": 0.0,
+    "query_resume_max_delta": 2.1630093272051454e-09,
+    "revision_resume": "identical",
+    "tokens": 129,
+    "zero_cadence": "final_checkpoint_saved"
+  },
+  "control_variate": {
+    "all_controls_sgd_max_error": 0.0,
+    "basis_change_squared_norm": 124.22222930246971,
+    "directory": "/home/renya/Sejong/.cache/cv-contract-57754",
+    "predictor_squared_norm": 0.004813203432121327,
+    "resume_optimizer_max_error": 0.0,
+    "resume_weights_max_error": 0.0
+  },
+  "parser": {
+    "command": "target/release/examples/parser_resume",
+    "output": [
+      "Dynamic parser: N=6/P=5/depth=3, lexical_bytes=70, BERT_positions=512, query_gradient_relative_error=0.0047849, artifact=exact",
+      "Query 1 loss 8.143147",
+      "Query 2 loss 7.902049",
+      "Query 2 loss 7.902049",
+      "Paired program resume: checkpoint restoration/RNG/config=exact, final weight_max_delta=0.000000030, moment_max_delta=0.000001431, program_probability_delta=0.000000000000"
+    ]
+  },
+  "inactive_objectives": {
+    "memory": [
+      "target=1 background=1 midpoint=0",
+      "target=0 background=0 midpoint=1"
+    ],
+    "query_pair": [
+      "supervised=1 consistency=0",
+      "supervised=1 contrast=0"
+    ],
+    "midpoint_only_resume_max_abs_error": 3.725290298461914e-09,
+    "pair_no_consistency_resume_max_abs_error": 1.1641532182693481e-10,
+    "progress_rng_equal": true,
+    "logs": [
+      ".cache/check-pruning/pair-resume.log",
+      ".cache/check-pruning/midpoint-resume.log"
+    ]
+  }
+}

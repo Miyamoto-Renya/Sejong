@@ -108,6 +108,7 @@ impl Engine {
         let dq = self.empty(&q.shape, DType::F32)?;
         let dk = self.empty(&k.shape, DType::F32)?;
         let dv = self.empty(&v.shape, DType::F32)?;
+        let delta = self.empty(&lse.shape, DType::F32)?;
         let constants = json::json!({"HQ":query_heads,"HK":kv_heads,"D":d,
             "BD":d.next_power_of_two(),"BK":t.min(32).next_power_of_two(),"WINDOW":window.unwrap_or(0)});
         self.launch(
@@ -120,6 +121,7 @@ impl Engine {
                 ("LSE", p(lse)),
                 ("DO", p(dy)),
                 ("DQ", p(&dq)),
+                ("Delta", p(&delta)),
                 ("T", n(t)?),
             ],
             constants.clone(),
@@ -131,9 +133,9 @@ impl Engine {
                 ("Q", p(q)),
                 ("K", p(k)),
                 ("V", p(v)),
-                ("O", p(o)),
                 ("LSE", p(lse)),
                 ("DO", p(dy)),
+                ("Delta", p(&delta)),
                 ("DK", p(&dk)),
                 ("DV", p(&dv)),
                 ("T", n(t)?),
@@ -257,8 +259,8 @@ impl Engine {
             dy.shape == [rows, shape[1]],
             "patch broadcast backward gradient dimensions",
         )?;
-        let dx = self.full(shape, DType::F32, 0.)?;
-        let dbos = self.full(&[1, shape[1]], DType::F32, 0.)?;
+        let dx = self.empty(shape, DType::F32)?;
+        let dbos = self.empty(&[1, shape[1]], DType::F32)?;
         self.launch(
             "hierarchy_patch_broadcast_backward",
             &[
@@ -270,7 +272,7 @@ impl Engine {
                 ("D", n(shape[1])?),
             ],
             json::json!({"PATCH":patch,"BLOCK":256}),
-            [dy.len().div_ceil(256), 1, 1],
+            [dx.len().div_ceil(256) + shape[1].div_ceil(256), 1, 1],
         )?;
         Ok((dx, dbos))
     }
@@ -352,16 +354,8 @@ impl Engine {
             [experts, 1, 1],
         )?;
         let counts = self.to_i32(&counts)?;
-        ensure(
-            counts.iter().map(|count| i64::from(*count)).sum::<i64>() == capacity as i64,
-            "expert packing must preserve every selected token slot",
-        )?;
         let mut result = Vec::with_capacity(experts);
         for (expert, count) in counts.into_iter().enumerate() {
-            ensure(
-                count >= 0 && count as usize <= capacity,
-                "expert packed row count",
-            )?;
             result.push(if count == 0 {
                 None
             } else {

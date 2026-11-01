@@ -1,0 +1,41 @@
+[
+  {
+    "key": "qkv-16-32-32",
+    "tile_MNK": [
+      16,
+      32,
+      32
+    ],
+    "warps": 4,
+    "vgprs": 238,
+    "private": 0,
+    "shared": 4096,
+    "global_scratch": 0
+  },
+  {
+    "key": "qkv-16-16-32",
+    "tile_MNK": [
+      16,
+      16,
+      32
+    ],
+    "warps": 4,
+    "vgprs": 153,
+    "private": 0,
+    "shared": 2048,
+    "global_scratch": 0
+  },
+  {
+    "key": "qkv-8-32-32",
+    "tile_MNK": [
+      8,
+      32,
+      32
+    ],
+    "warps": 4,
+    "vgprs": 188,
+    "private": 0,
+    "shared": 4096,
+    "global_scratch": 0
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "qkv_families": {
+    "logical_forward_per_step": 96,
+    "executed_forward_with_global_checkpoint": 160,
+    "forward_launch_savings_3_to_1": 320,
+    "dx_savings_3gemm_2add_to_1gemm": 384
+  },
+  "gateup": {
+    "forward_executed_in_three_step_profile": 1564,
+    "forward_executed_per_step_average": 521.3333333333334,
+    "forward_savings_3_to_1_per_step_average": 1042.6666666666667,
+    "logical_backward_in_three_step_profile": 830,
+    "backward_dx_savings_2gemm_1add_to_1gemm_per_step_average": 553.3333333333334
+  },
+  "raw_gate_up_forward_loads_saved_with_checkpoint": 301989888,
+  "raw_gate_up_forward_loads_saved_retained": 188743680,
+  "raw_gate_up_dx_saved_bytes": 100663296,
+  "raw_qkv_dx_saved_bytes": 134217728,
+  "qkv_half_compute_bytes": 8781824,
+  "gateup_half_compute_bytes": 25952256
+}

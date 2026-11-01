@@ -317,7 +317,7 @@ pub fn inventory(xs: &[String], name: &str) -> Result<()> {
     let set: std::collections::BTreeSet<_> = xs.iter().collect();
     ensure(
         !xs.is_empty() && set.len() == xs.len() && xs.iter().all(|x| !x.is_empty()),
-        format!("{name} requires unique nonempty entries"),
+        format_args!("{name} requires unique nonempty entries"),
     )
 }
 pub fn softmax(logits: &[f64]) -> Result<Vec<f64>> {
@@ -343,6 +343,8 @@ pub fn softmax(logits: &[f64]) -> Result<Vec<f64>> {
 pub struct ValueTraining {
     #[serde(default)]
     pub optimizer: OptimizerPolicy,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameter_vjp: Option<crate::ParameterVjpConfig>,
     #[serde(default)]
     pub batch: BatchPolicy,
     pub model: ModelConfig,
@@ -361,7 +363,7 @@ pub fn inventory_bytes(xs: &[ByteValue], name: &str) -> Result<()> {
     let set: std::collections::BTreeSet<_> = xs.iter().collect();
     ensure(
         !xs.is_empty() && set.len() == xs.len() && xs.iter().all(|x| !x.is_empty()),
-        format!("{name} requires unique nonempty byte entries"),
+        format_args!("{name} requires unique nonempty byte entries"),
     )
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]

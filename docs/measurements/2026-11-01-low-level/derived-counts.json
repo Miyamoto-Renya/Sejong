@@ -1,0 +1,14 @@
+{
+  "parameters": 26488192,
+  "parameter_tensors": 200,
+  "accumulation": 8,
+  "fp32_to_fp16_bytes_per_element": 6,
+  "weight_cast_launches_per_step": 1600,
+  "step_mirror_eliminates_launches": 1400,
+  "step_mirror_eliminates_raw_bytes": 1112504064,
+  "mirror_bytes": 52976384,
+  "expert_count_d2h_per_step": 128,
+  "input_label_bytes_per_step": 32768,
+  "local_delta_scalar_ops_valid_pairs_saved": 466612224,
+  "global_delta_scalar_ops_valid_pairs_saved": 135249920
+}

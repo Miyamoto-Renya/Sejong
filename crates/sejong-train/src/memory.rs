@@ -27,6 +27,8 @@ struct Progress {
     source: String,
     guard: Option<RevisionGuard>,
     batch_size: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    parameter_rng: Option<u64>,
 }
 fn fingerprint(spec: &impl Serialize, recipe: &str) -> Result<String> {
     let mut value = json::to_value(spec)?;
@@ -65,7 +67,7 @@ fn workspace_sum(terms: impl IntoIterator<Item = (u128, usize)>) -> Result<usize
     usize::try_from(bytes)
         .map_err(|_| sejong_core::Error::Message("training workspace size overflow".into()))
 }
-fn work_bytes(memory: &Memory, query_training: bool) -> Result<usize> {
+fn work_bytes(memory: &Memory, query_views: usize) -> Result<usize> {
     let c = &memory.metadata.config;
     let (t, d, f, l, h) = (
         c.tokens as u128,
@@ -83,9 +85,9 @@ fn work_bytes(memory: &Memory, query_training: bool) -> Result<usize> {
         (2, allocation(d, DType::F32)?),
         (1, allocation(1, DType::I32)?),
     ])?;
-    // Three query views retain their forward values and adjoints together.
-    if query_training {
-        workspace_sum([(6, query)])
+    // Active query views retain their forward values and adjoints together.
+    if query_views > 0 {
+        workspace_sum([(2 * query_views as u128, query)])
     } else {
         workspace_sum([
             (1, query),
@@ -219,18 +221,20 @@ fn progress(
         source: source.into(),
         guard,
         batch_size,
+        parameter_rng: None,
     }
 }
 fn open_run(out: &Path) -> Result<()> {
     ensure(
         !out.exists(),
-        format!("output already exists: {}", out.display()),
+        format_args!("output already exists: {}", out.display()),
     )?;
     std::fs::create_dir_all(out.join("checkpoints"))?;
     Ok(())
 }
 
 pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result<Memory> {
+    let query_plan = QueryObjective::prepare(spec)?;
     let source = memory_fingerprint(spec)?;
     let d = spec.config.dimension;
     let n = spec.requests.len();
@@ -314,7 +318,14 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
             rng.state = p.rng;
         }
         let start = saved.as_ref().map_or(0, |p| p.step);
-        let allowed = resolve_batch(e, &spec.batch, work_bytes(&memory, true)?, n, &params, 0)?;
+        let allowed = resolve_batch(
+            e,
+            &spec.batch,
+            work_bytes(&memory, query_plan.views())?,
+            n,
+            &params,
+            0,
+        )?;
         let batch = resume_batch(allowed, saved.as_ref())?;
         let settings =
             spec.optimizer
@@ -329,6 +340,7 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
                 &params,
                 &settings,
                 batch,
+                &query_plan,
             )?;
             memory.metadata.query_steps = step + 1;
             if step == start
@@ -370,7 +382,7 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
     } else {
         Adam::new(e, &params)?
     };
-    let allowed = resolve_batch(e, &spec.batch, work_bytes(&memory, false)?, n, &params, 0)?;
+    let allowed = resolve_batch(e, &spec.batch, work_bytes(&memory, 0)?, n, &params, 0)?;
     let chunks = resume_batch(allowed, if fact_resume { saved.as_ref() } else { None })?;
     let mut rng = Rng::new(spec.config.seed ^ 0x6661637473);
     if fact_resume {
@@ -429,7 +441,43 @@ pub fn train_memory(e: &mut Engine, spec: &MemoryTraining, out: &Path) -> Result
     memory.save(e, &out.join("model"))?;
     Ok(memory)
 }
-fn query_context(spec: &MemoryTraining, request: &[f32], rng: &mut Rng) -> Result<Vec<f32>> {
+struct QueryObjective {
+    target: f32,
+    background: f32,
+    midpoint: f32,
+}
+impl QueryObjective {
+    fn prepare(spec: &MemoryTraining) -> Result<Self> {
+        if let BackgroundPolicy::Gaussian {
+            standard_deviation,
+            zero_probability,
+        } = &spec.background
+        {
+            ensure(
+                standard_deviation.is_finite()
+                    && *standard_deviation >= 0.
+                    && zero_probability.is_finite()
+                    && (0. ..=1.).contains(zero_probability),
+                "invalid explicit background distribution",
+            )?;
+        }
+        let weights = spec
+            .query_loss
+            .normalized(&["target", "background", "midpoint"])?;
+        Ok(Self {
+            target: weights[0] as f32,
+            background: weights[1] as f32,
+            midpoint: weights[2] as f32,
+        })
+    }
+    fn alternate(&self) -> bool {
+        self.target > 0. || self.background > 0.
+    }
+    fn views(&self) -> usize {
+        1 + usize::from(self.alternate()) + usize::from(self.midpoint > 0.)
+    }
+}
+fn query_context(spec: &MemoryTraining, request: &[f32], rng: &mut Rng) -> Vec<f32> {
     let mut row = request.to_vec();
     let d = spec.config.dimension;
     let tokens = spec.config.tokens;
@@ -442,13 +490,6 @@ fn query_context(spec: &MemoryTraining, request: &[f32], rng: &mut Rng) -> Resul
             standard_deviation,
             zero_probability,
         } => {
-            ensure(
-                standard_deviation.is_finite()
-                    && *standard_deviation >= 0.
-                    && zero_probability.is_finite()
-                    && (0. ..=1.).contains(zero_probability),
-                "invalid explicit background distribution",
-            )?;
             let scale = if rng.uniform() < *zero_probability {
                 0.
             } else {
@@ -457,7 +498,7 @@ fn query_context(spec: &MemoryTraining, request: &[f32], rng: &mut Rng) -> Resul
             row.extend((d..tokens * d).map(|_| rng.normal() * scale));
         }
     }
-    Ok(row)
+    row
 }
 fn query_update(
     e: &mut Engine,
@@ -468,6 +509,7 @@ fn query_update(
     parameters: &[Parameter],
     settings: &TrainConfig,
     batch: usize,
+    objective: &QueryObjective,
 ) -> Result<f64> {
     let c = &spec.config;
     let d = c.dimension;
@@ -477,66 +519,102 @@ fn query_update(
     let mut target = vec![];
     for &i in &indices {
         let request: Vec<_> = spec.contexts[i][..d].iter().map(|x| *x as f32).collect();
-        first.extend(query_context(spec, &request, rng)?);
-        alternate.extend(query_context(spec, &request, rng)?);
-        target.extend(spec.target_queries[i].iter().map(|x| *x as f32));
+        first.extend(query_context(spec, &request, rng));
+        if objective.alternate() {
+            alternate.extend(query_context(spec, &request, rng));
+        }
+        if objective.target > 0. {
+            target.extend(spec.target_queries[i].iter().map(|x| *x as f32));
+        }
     }
     let mut middle = vec![];
-    for row in 0..batch {
-        let request: Vec<_> = (0..d)
-            .map(|j| {
-                0.5 * (first[row * c.tokens * d + j]
-                    + first[((row + batch - 1) % batch) * c.tokens * d + j])
-            })
-            .collect();
-        middle.extend(query_context(spec, &request, rng)?);
+    if objective.midpoint > 0. {
+        for row in 0..batch {
+            let request: Vec<_> = (0..d)
+                .map(|j| {
+                    0.5 * (first[row * c.tokens * d + j]
+                        + first[((row + batch - 1) % batch) * c.tokens * d + j])
+                })
+                .collect();
+            middle.extend(query_context(spec, &request, rng));
+        }
     }
     let a = e.from_f32(&[batch * c.tokens, d], &first)?;
-    let b = e.from_f32(&[batch * c.tokens, d], &alternate)?;
-    let m = e.from_f32(&[batch * c.tokens, d], &middle)?;
+    let b = if objective.alternate() {
+        Some(e.from_f32(&[batch * c.tokens, d], &alternate)?)
+    } else {
+        None
+    };
+    let m = if objective.midpoint > 0. {
+        Some(e.from_f32(&[batch * c.tokens, d], &middle)?)
+    } else {
+        None
+    };
     let mut g = Graph::new(e, true);
     let weights = memory.bind(&mut g, true, false);
     let qa = memory.query(&mut g, &weights, &a)?;
-    let qb = memory.query(&mut g, &weights, &b)?;
-    let qm = memory.query(&mut g, &weights, &m)?;
+    let qb = b
+        .as_ref()
+        .map(|b| memory.query(&mut g, &weights, b))
+        .transpose()?;
+    let qm = m
+        .as_ref()
+        .map(|m| memory.query(&mut g, &weights, m))
+        .transpose()?;
     let av = g.value(qa)?;
-    let bv = g.value(qb)?;
-    let mv = g.value(qm)?;
+    let bv = qb.map(|v| g.value(v)).transpose()?;
+    let mv = qm.map(|v| g.value(v)).transpose()?;
     let count = (batch * d) as f32;
     let mut da = vec![0.; batch * d];
-    let mut db = da.clone();
-    let mut dm = da.clone();
+    let mut db = bv.as_ref().map(|_| vec![0.; batch * d]);
+    let mut dm = mv.as_ref().map(|_| vec![0.; batch * d]);
     let mut loss = 0.;
-    let loss_weights = spec
-        .query_loss
-        .normalized(&["target", "background", "midpoint"])?;
-    let (wt, wc, wm) = (
-        loss_weights[0] as f32,
-        loss_weights[1] as f32,
-        loss_weights[2] as f32,
-    );
+    let (wt, wc, wm) = (objective.target, objective.background, objective.midpoint);
     for row in 0..batch {
         for j in 0..d {
             let k = row * d + j;
             let prev = ((row + batch - 1) % batch) * d + j;
-            let difference = av[k] - bv[k];
-            let midpoint = mv[k] - 0.5 * (av[k] + av[prev]);
-            loss += (wt * 0.5 * ((av[k] - target[k]).powi(2) + (bv[k] - target[k]).powi(2))
-                + wc * difference * difference
-                + wm * midpoint * midpoint) as f64
-                / count as f64;
-            da[k] += (wt * (av[k] - target[k]) + 2. * wc * difference - wm * midpoint) / count;
-            da[prev] -= wm * midpoint / count;
-            db[k] = (wt * (bv[k] - target[k]) - 2. * wc * difference) / count;
-            dm[k] = 2. * wm * midpoint / count;
+            let (mut value, mut ga, mut gb) = (0., 0., 0.);
+            if wt > 0. {
+                let b = bv.as_ref().unwrap()[k];
+                value = wt * 0.5 * ((av[k] - target[k]).powi(2) + (b - target[k]).powi(2));
+                ga = wt * (av[k] - target[k]);
+                gb = wt * (b - target[k]);
+            }
+            if wc > 0. {
+                let difference = av[k] - bv.as_ref().unwrap()[k];
+                value += wc * difference * difference;
+                ga += 2. * wc * difference;
+                gb -= 2. * wc * difference;
+            }
+            let midpoint = if wm > 0. {
+                mv.as_ref().unwrap()[k] - 0.5 * (av[k] + av[prev])
+            } else {
+                0.
+            };
+            if wm > 0. {
+                value += wm * midpoint * midpoint;
+                ga -= wm * midpoint;
+                dm.as_mut().unwrap()[k] = 2. * wm * midpoint / count;
+            }
+            loss += value as f64 / count as f64;
+            da[k] += ga / count;
+            if wm > 0. {
+                da[prev] -= wm * midpoint / count;
+            }
+            if let Some(db) = &mut db {
+                db[k] = gb / count;
+            }
         }
     }
     let shape = [batch, d];
-    let roots = [
-        (qa, g.engine.from_f32(&shape, &da)?),
-        (qb, g.engine.from_f32(&shape, &db)?),
-        (qm, g.engine.from_f32(&shape, &dm)?),
-    ];
+    let mut roots = vec![(qa, g.engine.from_f32(&shape, &da)?)];
+    if let (Some(qb), Some(db)) = (qb, db) {
+        roots.push((qb, g.engine.from_f32(&shape, &db)?));
+    }
+    if let (Some(qm), Some(dm)) = (qm, dm) {
+        roots.push((qm, g.engine.from_f32(&shape, &dm)?));
+    }
     g.backward_seeded(&roots)?;
     let gradients = parameters
         .iter()
@@ -663,7 +741,7 @@ pub fn revise_memory(
     } else {
         Adam::new(e, &params)?
     };
-    let allowed = resolve_batch(e, &spec.batch, work_bytes(&memory, false)?, n, &params, 0)?;
+    let allowed = resolve_batch(e, &spec.batch, work_bytes(&memory, 0)?, n, &params, 0)?;
     let chunks = resume_batch(allowed, saved.as_ref())?;
     let mut rng =
         Rng::new(memory.metadata.config.seed ^ 0x726576697365 ^ memory.metadata.fact_steps as u64);
@@ -733,6 +811,9 @@ pub fn revise_memory(
 }
 
 pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<NativeValue> {
+    if let Some(policy) = &spec.parameter_vjp {
+        policy.validate()?;
+    }
     spec.optimizer.configuration(
         spec.steps,
         spec.learning_rate,
@@ -773,6 +854,30 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
         "native value checkpoint source mismatch",
     )?;
     let parameters = model.parameters();
+    let materializer = spec
+        .parameter_vjp
+        .as_ref()
+        .map(|_| {
+            sejong_gpu::parameter_vjp::GradientMaterializer::new(
+                e,
+                &parameters
+                    .iter()
+                    .map(|p| p.value.clone())
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .transpose()?;
+    let mut parameter_rng = spec
+        .parameter_vjp
+        .as_ref()
+        .map(|policy| Rng::new(policy.seed));
+    if let Some(policy_rng) = &mut parameter_rng {
+        if let Some(state) = &saved {
+            policy_rng.state = state.parameter_rng.ok_or_else(|| {
+                sejong_core::Error::Message("native value checkpoint parameter RNG missing".into())
+            })?;
+        }
+    }
     let mut optimizer = if let Some(p) = &saved {
         ensure(p.phase == "value", "native value checkpoint phase mismatch")?;
         Adam::load_parameters(
@@ -829,12 +934,27 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
                 .collect::<Vec<_>>(),
         )?;
         let mut g = Graph::new(e, true);
+        if let Some(policy) = &spec.parameter_vjp {
+            g.configure_parameter_vjp(policy.clone(), parameter_rng.as_ref().unwrap().clone())?;
+        }
         let (logits, leaves) = model.forward_batch(&mut g, &indices, true)?;
         let loss = g.cross_entropy(logits, &label)?;
         let value = g.value(loss)?.iter().map(|x| *x as f64).sum::<f64>() / batch as f64;
         g.backward(&[(loss, 1.)])?;
-        let gradients = leaves.iter().map(|v| g.gradient(*v).cloned()).collect();
-        drop(g);
+        let parameter_statistics = g.parameter_vjp_statistics().clone();
+        let gradients = if let Some(materializer) = &materializer {
+            let gradients = leaves
+                .iter()
+                .map(|v| g.parameter_gradient(*v))
+                .collect::<Vec<_>>();
+            parameter_rng = g.parameter_vjp_rng();
+            drop(g);
+            materializer.materialize(e, &gradients)?
+        } else {
+            let gradients = leaves.iter().map(|v| g.gradient(*v).cloned()).collect();
+            drop(g);
+            gradients
+        };
         optimizer.accumulate(e, gradients)?;
         optimizer.update(e, &parameters, &settings, spec.learning_rate)?;
         model.metadata.steps = step + 1;
@@ -844,11 +964,22 @@ pub fn train_value(e: &mut Engine, spec: &ValueTraining, out: &Path) -> Result<N
             || step + 1 == spec.steps
         {
             eprintln!("{} native {} loss {:.6}", spec.model.id, step + 1, value);
+            if spec.parameter_vjp.is_some() {
+                eprintln!(
+                    "{}",
+                    json::json!({"step":step+1,"parameter_vjp_statistics":{
+                    "compressed_matrices":parameter_statistics.compressed_matrices,
+                    "dense_matrices":parameter_statistics.dense_matrices,
+                    "basis_groups":parameter_statistics.basis_groups,
+                    "projection_groups":parameter_statistics.projection_groups}})
+                );
+            }
         }
         if (spec.checkpoint_every > 0 && (step + 1) % spec.checkpoint_every == 0)
             || step + 1 == spec.steps
         {
-            let state = progress("value", step + 1, &optimizer, &rng, &source, None, batch);
+            let mut state = progress("value", step + 1, &optimizer, &rng, &source, None, batch);
+            state.parameter_rng = parameter_rng.as_ref().map(|rng| rng.state);
             atomic_directory(
                 &out.join(format!("checkpoints/value-{:08}", step + 1)),
                 |dir| {

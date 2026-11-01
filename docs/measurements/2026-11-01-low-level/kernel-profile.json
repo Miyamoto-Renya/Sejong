@@ -1,0 +1,170 @@
+{
+  "operations": [
+    {
+      "gpu_seconds": 0.11539010581560477,
+      "launches": 7405,
+      "operation": "add"
+    },
+    {
+      "gpu_seconds": 0.06537214395450436,
+      "launches": 5208,
+      "operation": "copy"
+    },
+    {
+      "gpu_seconds": 0.00025804199837148187,
+      "launches": 24,
+      "operation": "cross_entropy"
+    },
+    {
+      "gpu_seconds": 0.0002894039992243052,
+      "launches": 24,
+      "operation": "cross_entropy_backward"
+    },
+    {
+      "gpu_seconds": 0.00974584396462887,
+      "launches": 537,
+      "operation": "elementwise"
+    },
+    {
+      "gpu_seconds": 0.0002509209997951984,
+      "launches": 24,
+      "operation": "embedding"
+    },
+    {
+      "gpu_seconds": 0.000409284002147615,
+      "launches": 24,
+      "operation": "embedding_backward"
+    },
+    {
+      "gpu_seconds": 0.01763174004899327,
+      "launches": 2222,
+      "operation": "fill"
+    },
+    {
+      "gpu_seconds": 0.013161587994080015,
+      "launches": 1468,
+      "operation": "gather"
+    },
+    {
+      "gpu_seconds": 0.0066832919428125,
+      "launches": 734,
+      "operation": "gather_backward"
+    },
+    {
+      "gpu_seconds": 0.019922572923824183,
+      "launches": 480,
+      "operation": "hierarchy_attention"
+    },
+    {
+      "gpu_seconds": 0.023119029954075807,
+      "launches": 288,
+      "operation": "hierarchy_attention_dkv"
+    },
+    {
+      "gpu_seconds": 0.015695208949968217,
+      "launches": 288,
+      "operation": "hierarchy_attention_dq"
+    },
+    {
+      "gpu_seconds": 0.007100263948552299,
+      "launches": 734,
+      "operation": "hierarchy_expert_backward"
+    },
+    {
+      "gpu_seconds": 0.013616026908159292,
+      "launches": 1468,
+      "operation": "hierarchy_expert_combine"
+    },
+    {
+      "gpu_seconds": 0.0002498040003702044,
+      "launches": 24,
+      "operation": "hierarchy_patch_broadcast"
+    },
+    {
+      "gpu_seconds": 0.0003300430001690983,
+      "launches": 24,
+      "operation": "hierarchy_patch_broadcast_backward"
+    },
+    {
+      "gpu_seconds": 0.0002550030006095767,
+      "launches": 24,
+      "operation": "hierarchy_patch_pool"
+    },
+    {
+      "gpu_seconds": 0.00027399999741464857,
+      "launches": 24,
+      "operation": "hierarchy_patch_pool_backward"
+    },
+    {
+      "gpu_seconds": 0.0016586889913305638,
+      "launches": 192,
+      "operation": "hierarchy_route_backward"
+    },
+    {
+      "gpu_seconds": 0.0035079159857705285,
+      "launches": 384,
+      "operation": "hierarchy_route_pack"
+    },
+    {
+      "gpu_seconds": 0.003361468994058669,
+      "launches": 384,
+      "operation": "hierarchy_route_topk"
+    },
+    {
+      "gpu_seconds": 0.00021403999812901026,
+      "launches": 24,
+      "operation": "loss_summary"
+    },
+    {
+      "gpu_seconds": 0.5812607515733628,
+      "launches": 15096,
+      "operation": "matmul"
+    },
+    {
+      "gpu_seconds": 0.0011567329950630666,
+      "launches": 24,
+      "operation": "parameter_basis_register"
+    },
+    {
+      "gpu_seconds": 0.00648513388633728,
+      "launches": 3,
+      "operation": "parameter_gradient_update"
+    },
+    {
+      "gpu_seconds": 0.0004420020021498204,
+      "launches": 24,
+      "operation": "parameter_indices"
+    },
+    {
+      "gpu_seconds": 0.011938180971890687,
+      "launches": 192,
+      "operation": "parameter_prepare"
+    },
+    {
+      "gpu_seconds": 0.009252627979032682,
+      "launches": 1056,
+      "operation": "rmsnorm"
+    },
+    {
+      "gpu_seconds": 0.04571486785635352,
+      "launches": 672,
+      "operation": "rmsnorm_backward"
+    },
+    {
+      "gpu_seconds": 0.016150184009224175,
+      "launches": 1536,
+      "operation": "rope"
+    },
+    {
+      "gpu_seconds": 0.013290078016463612,
+      "launches": 1564,
+      "operation": "swiglu"
+    },
+    {
+      "gpu_seconds": 0.008352873991243537,
+      "launches": 830,
+      "operation": "swiglu_backward"
+    }
+  ],
+  "scope": "HIP event durations in an explicitly instrumented run"
+}

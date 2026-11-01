@@ -1,0 +1,24 @@
+{
+  "origin": "python/sejong_kernels/ops/kernels.py",
+  "origin_sha256": "286cca005738a9d48b1f825f57f4df1d9c8e44344e20c4d1ebf852d12d47013e",
+  "baseline_snapshot_sha256": "54a46ee3b40f58208162772a000698cd07b67f69eee1e41aca68d566d9826e5d",
+  "files": [
+    "qkv_compile.py",
+    "qkv_microbench.py",
+    "qkv-microbench-initial.json",
+    "dx_microbench.py",
+    "hip_microbench.py",
+    "qkv-compile.json",
+    "baseline_kernels.py",
+    "derived-counts.json",
+    "compile.json",
+    "microbench.json",
+    "dx_compile.py",
+    "qkv_conditional_compile.py",
+    "compile_probe.py",
+    "dx-compile.json",
+    "dx-microbench.json",
+    "qkv-microbench.json",
+    "qkv-conditional-compile.json"
+  ]
+}

@@ -33,9 +33,16 @@ pub fn sum_error(values: &[f64], extra_ops: usize) -> f64 {
     sejong_core::numeric::normalized_tolerance(values, extra_ops)
 }
 pub fn normalized(values: &[f64]) -> bool {
-    let mass = values.iter().sum::<f64>();
-    values.iter().all(|v| v.is_finite() && *v >= 0.)
-        && (mass - 1.).abs() <= sum_error(values, values.len())
+    let mut mass = 0.;
+    for &value in values {
+        if value < 0. {
+            return false;
+        }
+        mass += value;
+    }
+    mass.is_finite()
+        && (mass - 1.).abs()
+            <= sejong_core::numeric::sum_error(mass, values.len().saturating_mul(2))
 }
 pub fn vector<T: Clone>(length: usize, value: T, limit: usize, operation: &str) -> Result<Vec<T>> {
     require(limit, bytes::<T>(length)?, operation)?;

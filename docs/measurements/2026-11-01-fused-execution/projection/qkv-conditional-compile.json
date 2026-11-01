@@ -1,0 +1,35 @@
+[
+  {
+    "key": "matmul_qkv",
+    "symbol": "matmul",
+    "BN": 32,
+    "shared": 4096,
+    "threads": 128,
+    "vgprs": 111,
+    "sgprs": 22,
+    "private": 0,
+    "global_scratch": 0
+  },
+  {
+    "key": "qkv_conditional_32",
+    "symbol": "qkv_conditional",
+    "BN": 32,
+    "shared": 4096,
+    "threads": 128,
+    "vgprs": 240,
+    "sgprs": 36,
+    "private": 0,
+    "global_scratch": 0
+  },
+  {
+    "key": "qkv_conditional_16",
+    "symbol": "qkv_conditional",
+    "BN": 16,
+    "shared": 2048,
+    "threads": 128,
+    "vgprs": 157,
+    "sgprs": 29,
+    "private": 0,
+    "global_scratch": 0
+  }
+]

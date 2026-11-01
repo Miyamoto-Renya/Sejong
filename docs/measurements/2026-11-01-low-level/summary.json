@@ -1,0 +1,20 @@
+{
+  "checkpointed": {
+    "mean_seconds": 0.25963331159375,
+    "issued_flops": 107186421760,
+    "launches": 14259.625,
+    "peak_gpu_mib": 472,
+    "final_validation_bits_per_byte_token": 7.9348758879345604
+  },
+  "retain_activations": {
+    "mean_seconds": 0.217727692703125,
+    "issued_flops": 88483758080,
+    "launches": 11784.375,
+    "peak_gpu_mib": 483,
+    "final_validation_bits_per_byte_token": 7.9348758879345604
+  },
+  "time_reduction_percent": 16.140309051018477,
+  "issued_flops_reduction_percent": 17.448724729217048,
+  "speedup": 1.1924680244867334,
+  "condition": "Same model, corpus, seeds, optimizer, batch and 66-step schedule; only training.activation_checkpointing changed; isolated GPU run"
+}

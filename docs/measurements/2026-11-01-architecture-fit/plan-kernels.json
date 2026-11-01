@@ -1,0 +1,35 @@
+[
+  {
+    "name": "mirror",
+    "batch": 1,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain.toml",
+    "executable": "/home/renya/Sejong/.cache/fit-research/mirror-root/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/mirror-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/mirror-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  },
+  {
+    "name": "dot2",
+    "batch": 1,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain.toml",
+    "executable": "/home/renya/Sejong/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/dot2-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/dot2-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  },
+  {
+    "name": "combined",
+    "batch": 1,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain.toml",
+    "executable": "/home/renya/Sejong/.cache/fit-research/mirror-root/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/combined-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/combined-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  }
+]

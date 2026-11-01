@@ -1,0 +1,23 @@
+[
+  {
+    "name": "baseline",
+    "batch": 1,
+    "config": ".cache/fit-research/baseline.toml",
+    "executable": "target/release/sejong",
+    "env": {}
+  },
+  {
+    "name": "retain",
+    "batch": 1,
+    "config": ".cache/fit-research/retain.toml",
+    "executable": "target/release/sejong",
+    "env": {}
+  },
+  {
+    "name": "retain-b4",
+    "batch": 4,
+    "config": ".cache/fit-research/retain-b4.toml",
+    "executable": "target/release/sejong",
+    "env": {}
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "weights_max_abs_error": 3.725290298461914e-09,
+  "different_elements": 14,
+  "elements": 26488192,
+  "reference": "runs/check-pruning-rx6600/run-002/model/weights.safetensors",
+  "retain_activations": "runs/low-level-retain-activations-isolated/run-000/model/weights.safetensors"
+}

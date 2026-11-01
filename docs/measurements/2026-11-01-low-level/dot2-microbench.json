@@ -1,0 +1,875 @@
+{
+  "started_utc": "2026-11-01T12:53:13Z",
+  "finished_utc": "2026-11-01T12:53:15Z",
+  "measurement_context": "Sequential GPU ownership after root benchmark completion",
+  "device": "AMD Radeon RX 6600",
+  "target": "gfx1032",
+  "input_dtype": "f16",
+  "output_dtype": "f16",
+  "accumulator": "f32",
+  "tile_MNK": [
+    16,
+    32,
+    32
+  ],
+  "warps": 4,
+  "wave_size": 32,
+  "warmup_per_ABBA_slot": 24,
+  "batch_launches": 256,
+  "ABBA_rounds": 8,
+  "measurement": "HIP events bracket each batch on a dedicated stream; event time includes device idle gaps from host submission. enqueue is CPU launch-loop wall time; wall includes event calls and final stream synchronization. H2D/D2H, allocation and compilation occur outside timing.",
+  "seed": 20261101,
+  "runs": [
+    {
+      "shape_MNK": [
+        512,
+        384,
+        128
+      ],
+      "variants": {
+        "baseline": {
+          "event_us_per_launch": {
+            "minimum": 73.17642122507095,
+            "median": 80.33966273069382,
+            "maximum": 82.01120048761368
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.7912421839128,
+            "median": 1.8718789078775444,
+            "maximum": 2.0201015615839424
+          },
+          "wall_us_per_launch": {
+            "minimum": 73.24366406180616,
+            "median": 80.40386327934357,
+            "maximum": 82.07973437635019
+          }
+        },
+        "native_half": {
+          "event_us_per_launch": {
+            "minimum": 64.35451656579971,
+            "median": 65.07524475455284,
+            "maximum": 65.77200442552567
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.8022265564354711,
+            "median": 1.855046875220978,
+            "maximum": 2.1935625014180005
+          },
+          "wall_us_per_launch": {
+            "minimum": 64.41738280926756,
+            "median": 65.14039648308767,
+            "maximum": 65.83943358862143
+          }
+        }
+      },
+      "native_vs_baseline": {
+        "max_abs": 0.00390625,
+        "relative_l2": 9.477071149199707e-06
+      },
+      "cpu_fp64_dot_samples": {
+        "count": 64,
+        "baseline_max_abs": 0.0018240539357066154,
+        "baseline_relative_l2": 0.00021555384993720222,
+        "native_max_abs": 0.0018240539357066154,
+        "native_relative_l2": 0.00021555384993720222
+      },
+      "samples": [
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 80.88001608848572,
+          "enqueue_us_per_launch": 1.7988828062698303,
+          "wall_us_per_launch": 80.96353906239528
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 65.49660116434097,
+          "enqueue_us_per_launch": 1.933687499899861,
+          "wall_us_per_launch": 65.56825000103572
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 65.0564432144165,
+          "enqueue_us_per_launch": 1.8428203105713692,
+          "wall_us_per_launch": 65.1231328134827
+        },
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 76.71284675598145,
+          "enqueue_us_per_launch": 1.8545078148690664,
+          "wall_us_per_launch": 76.79010155925425
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 81.77836239337921,
+          "enqueue_us_per_launch": 1.981355467250978,
+          "wall_us_per_launch": 81.85819140749118
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 65.00574946403503,
+          "enqueue_us_per_launch": 2.0353515637339115,
+          "wall_us_per_launch": 65.0733398401826
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 65.77200442552567,
+          "enqueue_us_per_launch": 2.021472660374002,
+          "wall_us_per_launch": 65.83943358862143
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 79.56167310476303,
+          "enqueue_us_per_launch": 1.851761716409328,
+          "wall_us_per_launch": 79.62923437787595
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 80.82041144371033,
+          "enqueue_us_per_launch": 1.9367773447243053,
+          "wall_us_per_launch": 80.88355859570129
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 65.49480557441711,
+          "enqueue_us_per_launch": 1.8022265564354711,
+          "wall_us_per_launch": 65.55848437983514
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 65.00870734453201,
+          "enqueue_us_per_launch": 1.8333320284114052,
+          "wall_us_per_launch": 65.07288671997458
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 80.8706060051918,
+          "enqueue_us_per_launch": 1.8776562527023088,
+          "wall_us_per_launch": 80.96133984736298
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 81.17076754570007,
+          "enqueue_us_per_launch": 1.8696484360702925,
+          "wall_us_per_launch": 81.24511718676786
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 64.35451656579971,
+          "enqueue_us_per_launch": 1.8203906293479122,
+          "wall_us_per_launch": 64.41738280926756
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 64.95733559131622,
+          "enqueue_us_per_launch": 1.8210468795132329,
+          "wall_us_per_launch": 65.02249609496857
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 78.76276224851608,
+          "enqueue_us_per_launch": 1.7912421839128,
+          "wall_us_per_launch": 78.82854687579766
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 80.37324994802475,
+          "enqueue_us_per_launch": 1.9190820310655,
+          "wall_us_per_launch": 80.4368046871673
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 65.09404629468918,
+          "enqueue_us_per_launch": 1.821761713927117,
+          "wall_us_per_launch": 65.15766015269264
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 65.24420529603958,
+          "enqueue_us_per_launch": 2.1935625014180005,
+          "wall_us_per_launch": 65.31178515700731
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 80.30607551336288,
+          "enqueue_us_per_launch": 1.890011716909612,
+          "wall_us_per_launch": 80.37092187151984
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 79.77607846260071,
+          "enqueue_us_per_launch": 1.8185976529139225,
+          "wall_us_per_launch": 79.83993359772512
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 64.95780497789383,
+          "enqueue_us_per_launch": 1.863625001874425,
+          "wall_us_per_launch": 65.02484765746885
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 65.32718986272812,
+          "enqueue_us_per_launch": 1.8464687485675313,
+          "wall_us_per_launch": 65.39217968537514
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 78.92214506864548,
+          "enqueue_us_per_launch": 1.8741093796847963,
+          "wall_us_per_launch": 78.98546484597091
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 80.7371735572815,
+          "enqueue_us_per_launch": 1.8496250007160597,
+          "wall_us_per_launch": 80.80163281221076
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 65.04405289888382,
+          "enqueue_us_per_launch": 1.8358906217486037,
+          "wall_us_per_launch": 65.10793359382205
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 65.11295586824417,
+          "enqueue_us_per_launch": 1.9228593757247836,
+          "wall_us_per_launch": 65.17546875528524
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 73.17642122507095,
+          "enqueue_us_per_launch": 1.833222661673517,
+          "wall_us_per_launch": 73.24366406180616
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 82.01120048761368,
+          "enqueue_us_per_launch": 2.0201015615839424,
+          "wall_us_per_launch": 82.07973437635019
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 65.6210333108902,
+          "enqueue_us_per_launch": 2.0888281255793117,
+          "wall_us_per_launch": 65.68783984306492
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 64.84242528676987,
+          "enqueue_us_per_launch": 2.034902344405509,
+          "wall_us_per_launch": 64.90590624963488
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 79.84717190265656,
+          "enqueue_us_per_launch": 2.0194648442384278,
+          "wall_us_per_launch": 79.910781252579
+        }
+      ],
+      "native_median_speedup": 1.234565663697685
+    },
+    {
+      "shape_MNK": [
+        512,
+        128,
+        384
+      ],
+      "variants": {
+        "baseline": {
+          "event_us_per_launch": {
+            "minimum": 85.63723415136337,
+            "median": 87.66843006014824,
+            "maximum": 88.86117488145828
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.7847812543436703,
+            "median": 1.915537108487797,
+            "maximum": 3.138882810560517
+          },
+          "wall_us_per_launch": {
+            "minimum": 85.70390234297065,
+            "median": 87.73626367286624,
+            "maximum": 88.92533202953246
+          }
+        },
+        "native_half": {
+          "event_us_per_launch": {
+            "minimum": 63.38123977184296,
+            "median": 66.04626402258873,
+            "maximum": 66.93657487630844
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.8082109392025814,
+            "median": 1.9531660164773257,
+            "maximum": 3.1421171868828424
+          },
+          "wall_us_per_launch": {
+            "minimum": 63.448140622313076,
+            "median": 66.11208593909623,
+            "maximum": 67.00050390406886
+          }
+        }
+      },
+      "native_vs_baseline": {
+        "max_abs": 0.00390625,
+        "relative_l2": 1.1892005039308234e-05
+      },
+      "cpu_fp64_dot_samples": {
+        "count": 64,
+        "baseline_max_abs": 0.0026985741133103147,
+        "baseline_relative_l2": 0.00016410044893643642,
+        "native_max_abs": 0.0026985741133103147,
+        "native_relative_l2": 0.00016410044893643642
+      },
+      "samples": [
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 87.85553276538849,
+          "enqueue_us_per_launch": 3.093933592879239,
+          "wall_us_per_launch": 87.92999999940321
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 66.111259162426,
+          "enqueue_us_per_launch": 3.1421171868828424,
+          "wall_us_per_launch": 66.18171875061307
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 65.34469872713089,
+          "enqueue_us_per_launch": 3.101738279553956,
+          "wall_us_per_launch": 65.41337890553223
+        },
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 87.64773607254028,
+          "enqueue_us_per_launch": 3.138882810560517,
+          "wall_us_per_launch": 87.71810937702185
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 87.87242323160172,
+          "enqueue_us_per_launch": 3.112230473334421,
+          "wall_us_per_launch": 87.94092187258684
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 66.03939831256866,
+          "enqueue_us_per_launch": 1.845042973513955,
+          "wall_us_per_launch": 66.10714062560419
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 66.19314104318619,
+          "enqueue_us_per_launch": 1.9513515638891477,
+          "wall_us_per_launch": 66.25713672292477
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 86.2070769071579,
+          "enqueue_us_per_launch": 1.9261328105812936,
+          "wall_us_per_launch": 86.27062500465854
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 87.27428317070007,
+          "enqueue_us_per_launch": 1.8626132813892582,
+          "wall_us_per_launch": 87.33802734184337
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 66.07126444578171,
+          "enqueue_us_per_launch": 1.864640623239211,
+          "wall_us_per_launch": 66.13371484576192
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 64.04279917478561,
+          "enqueue_us_per_launch": 1.9885898439042649,
+          "wall_us_per_launch": 64.10795312916662
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 87.76725083589554,
+          "enqueue_us_per_launch": 2.061214843251946,
+          "wall_us_per_launch": 87.83187890060162
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 87.33615279197693,
+          "enqueue_us_per_launch": 1.8745937495623366,
+          "wall_us_per_launch": 87.39947656266622
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 66.0531297326088,
+          "enqueue_us_per_launch": 1.891308592405494,
+          "wall_us_per_launch": 66.11703125258828
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 66.12250953912735,
+          "enqueue_us_per_launch": 1.8219062525304253,
+          "wall_us_per_launch": 66.18560546911567
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 86.31504327058792,
+          "enqueue_us_per_launch": 1.8963789116810403,
+          "wall_us_per_launch": 86.37848437587081
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 88.02193403244019,
+          "enqueue_us_per_launch": 1.9204960892693634,
+          "wall_us_per_launch": 88.0948710957341
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 65.51046669483185,
+          "enqueue_us_per_launch": 2.0397031263996723,
+          "wall_us_per_launch": 65.58511718424143
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 63.92186880111694,
+          "enqueue_us_per_launch": 2.017980463620006,
+          "wall_us_per_launch": 63.98736719148701
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 87.6891240477562,
+          "enqueue_us_per_launch": 1.973761719398226,
+          "wall_us_per_launch": 87.75441796871064
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 87.93319761753082,
+          "enqueue_us_per_launch": 1.9105781277062306,
+          "wall_us_per_launch": 87.99637890888334
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 64.40859287977219,
+          "enqueue_us_per_launch": 1.901777345381106,
+          "wall_us_per_launch": 64.47339843163036
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 66.93657487630844,
+          "enqueue_us_per_launch": 1.8082109392025814,
+          "wall_us_per_launch": 67.00050390406886
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 86.02629601955414,
+          "enqueue_us_per_launch": 1.7847812543436703,
+          "wall_us_per_launch": 86.09023046801667
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 88.86117488145828,
+          "enqueue_us_per_launch": 1.7932265663489488,
+          "wall_us_per_launch": 88.92533202953246
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 63.38123977184296,
+          "enqueue_us_per_launch": 1.9684882772708079,
+          "wall_us_per_launch": 63.448140622313076
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 66.48564338684082,
+          "enqueue_us_per_launch": 1.9969531237506999,
+          "wall_us_per_launch": 66.55311328529478
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 85.63723415136337,
+          "enqueue_us_per_launch": 1.8576953095816862,
+          "wall_us_per_launch": 85.70390234297065
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 88.42398226261139,
+          "enqueue_us_per_launch": 2.026164061419422,
+          "wall_us_per_launch": 88.48816796813708
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 66.77938997745514,
+          "enqueue_us_per_launch": 1.8957382792450517,
+          "wall_us_per_launch": 66.84385156319195
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 63.93077224493027,
+          "enqueue_us_per_launch": 1.9549804690655037,
+          "wall_us_per_launch": 63.995324218524274
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 87.2470960021019,
+          "enqueue_us_per_launch": 1.8047304664037256,
+          "wall_us_per_launch": 87.31312109233613
+        }
+      ],
+      "native_median_speedup": 1.3273790933907244
+    },
+    {
+      "shape_MNK": [
+        64,
+        512,
+        512
+      ],
+      "variants": {
+        "baseline": {
+          "event_us_per_launch": {
+            "minimum": 69.91223990917206,
+            "median": 73.88845458626747,
+            "maximum": 80.15702664852142
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.8444296827624385,
+            "median": 1.8646308603820216,
+            "maximum": 3.094980471018971
+          },
+          "wall_us_per_launch": {
+            "minimum": 69.98489453735601,
+            "median": 73.95249023289807,
+            "maximum": 80.27228906115624
+          }
+        },
+        "native_half": {
+          "event_us_per_launch": {
+            "minimum": 54.245367646217346,
+            "median": 56.68382905423641,
+            "maximum": 57.968370616436005
+          },
+          "enqueue_us_per_launch": {
+            "minimum": 1.8272499957561195,
+            "median": 1.8869375004726407,
+            "maximum": 3.0653867213459307
+          },
+          "wall_us_per_launch": {
+            "minimum": 54.31271484468425,
+            "median": 56.74965429491863,
+            "maximum": 58.0386367232677
+          }
+        }
+      },
+      "native_vs_baseline": {
+        "max_abs": 0.0078125,
+        "relative_l2": 1.0909537166458092e-05
+      },
+      "cpu_fp64_dot_samples": {
+        "count": 64,
+        "baseline_max_abs": 0.003801044949796051,
+        "baseline_relative_l2": 0.00019291039865721886,
+        "native_max_abs": 0.003801044949796051,
+        "native_relative_l2": 0.00019291039865721886
+      },
+      "samples": [
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 80.15702664852142,
+          "enqueue_us_per_launch": 3.094980471018971,
+          "wall_us_per_launch": 80.27228906115624
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 57.968370616436005,
+          "enqueue_us_per_launch": 3.065085941500456,
+          "wall_us_per_launch": 58.0386367232677
+        },
+        {
+          "round": 0,
+          "variant": "native_half",
+          "event_us_per_launch": 57.116493582725525,
+          "enqueue_us_per_launch": 3.0653867213459307,
+          "wall_us_per_launch": 57.18541797250509
+        },
+        {
+          "round": 0,
+          "variant": "baseline",
+          "event_us_per_launch": 73.66368919610977,
+          "enqueue_us_per_launch": 3.094804682746144,
+          "wall_us_per_launch": 73.73130468835143
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 74.53431189060211,
+          "enqueue_us_per_launch": 3.012679684388786,
+          "wall_us_per_launch": 74.6011601577834
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 54.245367646217346,
+          "enqueue_us_per_launch": 1.9039335938941804,
+          "wall_us_per_launch": 54.31271484468425
+        },
+        {
+          "round": 1,
+          "variant": "native_half",
+          "event_us_per_launch": 57.073988020420074,
+          "enqueue_us_per_launch": 2.004328123916821,
+          "wall_us_per_launch": 57.13953515140702
+        },
+        {
+          "round": 1,
+          "variant": "baseline",
+          "event_us_per_launch": 74.39134269952774,
+          "enqueue_us_per_launch": 1.8511601567183789,
+          "wall_us_per_launch": 74.5951445324522
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 72.80460745096207,
+          "enqueue_us_per_launch": 1.995914061581061,
+          "wall_us_per_launch": 72.86921874793961
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 57.78837203979492,
+          "enqueue_us_per_launch": 1.8701874964222043,
+          "wall_us_per_launch": 57.855945307494494
+        },
+        {
+          "round": 2,
+          "variant": "native_half",
+          "event_us_per_launch": 56.78398534655571,
+          "enqueue_us_per_launch": 1.8897109370641374,
+          "wall_us_per_launch": 56.847730469655744
+        },
+        {
+          "round": 2,
+          "variant": "baseline",
+          "event_us_per_launch": 73.91040772199631,
+          "enqueue_us_per_launch": 1.865160157876744,
+          "wall_us_per_launch": 73.97456249691459
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 74.34821873903275,
+          "enqueue_us_per_launch": 1.8609570346939108,
+          "wall_us_per_launch": 74.41218750159351
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 56.64023384451866,
+          "enqueue_us_per_launch": 1.9939062525509144,
+          "wall_us_per_launch": 56.70456249617928
+        },
+        {
+          "round": 3,
+          "variant": "native_half",
+          "event_us_per_launch": 54.580528289079666,
+          "enqueue_us_per_launch": 1.8521562523687862,
+          "wall_us_per_launch": 54.646390630352926
+        },
+        {
+          "round": 3,
+          "variant": "baseline",
+          "event_us_per_launch": 69.91223990917206,
+          "enqueue_us_per_launch": 1.8535937513775025,
+          "wall_us_per_launch": 69.98489453735601
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 73.37915152311325,
+          "enqueue_us_per_launch": 1.8444296827624385,
+          "wall_us_per_launch": 73.44603125147842
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 56.50148540735245,
+          "enqueue_us_per_launch": 1.8353203117271732,
+          "wall_us_per_launch": 56.56634765216495
+        },
+        {
+          "round": 4,
+          "variant": "native_half",
+          "event_us_per_launch": 54.610688239336014,
+          "enqueue_us_per_launch": 1.8574687459249617,
+          "wall_us_per_launch": 54.67561719285641
+        },
+        {
+          "round": 4,
+          "variant": "baseline",
+          "event_us_per_launch": 74.39681142568588,
+          "enqueue_us_per_launch": 1.8761757800689338,
+          "wall_us_per_launch": 74.46027733948313
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 73.86650145053864,
+          "enqueue_us_per_launch": 1.856250001708304,
+          "wall_us_per_launch": 73.93041796888156
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 56.72742426395416,
+          "enqueue_us_per_launch": 1.9697187454426057,
+          "wall_us_per_launch": 56.79474609365798
+        },
+        {
+          "round": 5,
+          "variant": "native_half",
+          "event_us_per_launch": 56.98477104306221,
+          "enqueue_us_per_launch": 1.9171914047433347,
+          "wall_us_per_launch": 57.05253125398713
+        },
+        {
+          "round": 5,
+          "variant": "baseline",
+          "event_us_per_launch": 71.99367135763168,
+          "enqueue_us_per_launch": 1.8499062548471557,
+          "wall_us_per_launch": 72.05918359431962
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 74.4202509522438,
+          "enqueue_us_per_launch": 1.962613282557868,
+          "wall_us_per_launch": 74.484191401325
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 55.035531520843506,
+          "enqueue_us_per_launch": 1.8604999993954152,
+          "wall_us_per_launch": 55.0996796846448
+        },
+        {
+          "round": 6,
+          "variant": "native_half",
+          "event_us_per_launch": 56.56241998076439,
+          "enqueue_us_per_launch": 1.8272499957561195,
+          "wall_us_per_launch": 56.62626171698548
+        },
+        {
+          "round": 6,
+          "variant": "baseline",
+          "event_us_per_launch": 72.90257513523102,
+          "enqueue_us_per_launch": 1.8506640628856985,
+          "wall_us_per_launch": 72.96626561981157
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 74.23118501901627,
+          "enqueue_us_per_launch": 1.8641015628872992,
+          "wall_us_per_launch": 74.29508593759238
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 57.33492970466614,
+          "enqueue_us_per_launch": 1.8706328148709872,
+          "wall_us_per_launch": 57.39796093706673
+        },
+        {
+          "round": 7,
+          "variant": "native_half",
+          "event_us_per_launch": 56.11976236104965,
+          "enqueue_us_per_launch": 1.884164063881144,
+          "wall_us_per_launch": 56.1838828119221
+        },
+        {
+          "round": 7,
+          "variant": "baseline",
+          "event_us_per_launch": 72.60038703680038,
+          "enqueue_us_per_launch": 1.8662500025357076,
+          "wall_us_per_launch": 72.66604297484491
+        }
+      ],
+      "native_median_speedup": 1.303519113283072
+    }
+  ],
+  "artifact_sha256": {
+    "matmul-0-0.hsaco": "dd41b4e70544eda97bee0e9ac61977d4c71272e4c6ab334822205e6db3426a6b",
+    "matmul-0-1.hsaco": "0d96933eb50794afffde05865812aba9118dc54ea048f1a84e40ae26a4174f9c",
+    "matmul-1-0.hsaco": "c6dee4a8fb20385206282a78499b3d5c2451ee02f5dedda493e43c458f4a1b95",
+    "native_half_matmul-0-0.hsaco": "ed3afa2f988fe4124fa0866560f919e75822b2aa8aa8b8b75e5fd2b2ca564798",
+    "native_half_matmul-0-1.hsaco": "3b2a47ff0f00d6f98a766cc1aa02fa5d319a4c2f097d397c4664481a19ba5021",
+    "native_half_matmul-1-0.hsaco": "d392fedbc9bf65931e0ca901823427ed7869f69fca7e1027a53cf3852f9e3093"
+  }
+}

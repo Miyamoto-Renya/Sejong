@@ -1,0 +1,256 @@
+{
+  "started_utc": "2026-11-01T13:09:47Z",
+  "finished_utc": "2026-11-01T13:09:48Z",
+  "device": "AMD Radeon RX 6600",
+  "hip_runtime_version": 71626385,
+  "triton": "3.8.0+git669b31ac.rocm10.1.0",
+  "kernel": "actual Sejong add FP32, in-place accumulation of ones",
+  "measurement": "HIP event and host synchronized wall per captured chain; direct ctypes submissions vs graph replay; compilation and H2D reset outside timing; 2 ABBA rounds; warm direct and graph before samples",
+  "artifact_sha256": "77eb38c0861b24ce5f4ca44a686681e5a149bb74d22613658deb736b01484455",
+  "results": [
+    {
+      "elements": 256,
+      "nodes": 128,
+      "captured_nodes": 128,
+      "capture_seconds": 0.0003697239990287926,
+      "instantiate_seconds": 0.000306641999486601,
+      "output_expected": 128,
+      "output_min": 128.0,
+      "output_max": 128.0,
+      "variants": {
+        "direct": {
+          "enqueue_seconds": {
+            "minimum": 0.00023219499962578993,
+            "median": 0.0002409509997960413,
+            "maximum": 0.00024798699996608775
+          },
+          "synchronized_seconds": {
+            "minimum": 0.000408866999350721,
+            "median": 0.00041129149940388743,
+            "maximum": 0.00041350299943587743
+          },
+          "event_seconds": {
+            "minimum": 0.00039536198973655703,
+            "median": 0.0003970019966363907,
+            "maximum": 0.0003976829946041107
+          }
+        },
+        "graph": {
+          "enqueue_seconds": {
+            "minimum": 3.7560002965619788e-06,
+            "median": 4.247000106261112e-06,
+            "maximum": 7.438999091391452e-06
+          },
+          "synchronized_seconds": {
+            "minimum": 0.0003325219986436423,
+            "median": 0.00033341749985993374,
+            "maximum": 0.00033421899934182875
+          },
+          "event_seconds": {
+            "minimum": 0.00032408100366592405,
+            "median": 0.0003244214951992035,
+            "maximum": 0.00032508200407028196
+          }
+        }
+      },
+      "node_disabled_output_min_max": [
+        127.0,
+        127.0
+      ],
+      "single_node_parameter_update_seconds": 0.00010053199912363198,
+      "node_alpha_updated_output_min_max": [
+        129.0,
+        129.0
+      ],
+      "synchronized_median_speedup": 1.2335630240664273
+    },
+    {
+      "elements": 256,
+      "nodes": 1024,
+      "captured_nodes": 1024,
+      "capture_seconds": 0.0019402339985390427,
+      "instantiate_seconds": 0.0017089510001824237,
+      "output_expected": 1024,
+      "output_min": 1024.0,
+      "output_max": 1024.0,
+      "variants": {
+        "direct": {
+          "enqueue_seconds": {
+            "minimum": 0.001836241999626509,
+            "median": 0.001888500499262591,
+            "maximum": 0.0020615369994629873
+          },
+          "synchronized_seconds": {
+            "minimum": 0.003023905001100502,
+            "median": 0.0030423794996750075,
+            "maximum": 0.0031071659996086964
+          },
+          "event_seconds": {
+            "minimum": 0.0030102219581604004,
+            "median": 0.0030283424854278566,
+            "maximum": 0.003091299057006836
+          }
+        },
+        "graph": {
+          "enqueue_seconds": {
+            "minimum": 1.0846000805031508e-05,
+            "median": 1.2136501027271152e-05,
+            "maximum": 1.4561001080437563e-05
+          },
+          "synchronized_seconds": {
+            "minimum": 0.002431318000162719,
+            "median": 0.002499256500414049,
+            "maximum": 0.0029868710007576738
+          },
+          "event_seconds": {
+            "minimum": 0.002420729875564575,
+            "median": 0.0024886524677276613,
+            "maximum": 0.0029714610576629637
+          }
+        }
+      },
+      "synchronized_median_speedup": 1.2173138288010776
+    },
+    {
+      "elements": 256,
+      "nodes": 4096,
+      "captured_nodes": 4096,
+      "capture_seconds": 0.006482296999820392,
+      "instantiate_seconds": 0.00905876700016961,
+      "output_expected": 4096,
+      "output_min": 4096.0,
+      "output_max": 4096.0,
+      "variants": {
+        "direct": {
+          "enqueue_seconds": {
+            "minimum": 0.007431255999108544,
+            "median": 0.007509922000281222,
+            "maximum": 0.007799183000315679
+          },
+          "synchronized_seconds": {
+            "minimum": 0.012161561000539223,
+            "median": 0.012273655499484448,
+            "maximum": 0.012479302000429016
+          },
+          "event_seconds": {
+            "minimum": 0.012148951530456543,
+            "median": 0.012259469032287598,
+            "maximum": 0.01246572780609131
+          }
+        },
+        "graph": {
+          "enqueue_seconds": {
+            "minimum": 2.8373999157338403e-05,
+            "median": 3.783149895753013e-05,
+            "maximum": 4.034000085084699e-05
+          },
+          "synchronized_seconds": {
+            "minimum": 0.009737271999256336,
+            "median": 0.010017299499850196,
+            "maximum": 0.010255171000608243
+          },
+          "event_seconds": {
+            "minimum": 0.00972196102142334,
+            "median": 0.010003677368164062,
+            "maximum": 0.010245633125305176
+          }
+        }
+      },
+      "synchronized_median_speedup": 1.225245935760231
+    },
+    {
+      "elements": 256,
+      "nodes": 14260,
+      "captured_nodes": 14260,
+      "capture_seconds": 0.021803813999213162,
+      "instantiate_seconds": 0.06025900399981765,
+      "output_expected": 14260,
+      "output_min": 14260.0,
+      "output_max": 14260.0,
+      "variants": {
+        "direct": {
+          "enqueue_seconds": {
+            "minimum": 0.026421095000841888,
+            "median": 0.027943964500082075,
+            "maximum": 0.028853976999016595
+          },
+          "synchronized_seconds": {
+            "minimum": 0.04306908899889095,
+            "median": 0.0431937729999845,
+            "maximum": 0.04380226700050116
+          },
+          "event_seconds": {
+            "minimum": 0.04305240631103516,
+            "median": 0.043178443908691404,
+            "maximum": 0.04378713226318359
+          }
+        },
+        "graph": {
+          "enqueue_seconds": {
+            "minimum": 9.995199980039615e-05,
+            "median": 0.0001163199985967367,
+            "maximum": 0.0001270930006285198
+          },
+          "synchronized_seconds": {
+            "minimum": 0.03594057000009343,
+            "median": 0.036120364499765856,
+            "maximum": 0.03631163700083562
+          },
+          "event_seconds": {
+            "minimum": 0.03592490005493164,
+            "median": 0.036108484268188475,
+            "maximum": 0.036302108764648434
+          }
+        }
+      },
+      "synchronized_median_speedup": 1.1958288239384876
+    },
+    {
+      "elements": 65536,
+      "nodes": 4096,
+      "captured_nodes": 4096,
+      "capture_seconds": 0.006238944999495288,
+      "instantiate_seconds": 0.007525852000981104,
+      "output_expected": 4096,
+      "output_min": 4096.0,
+      "output_max": 4096.0,
+      "variants": {
+        "direct": {
+          "enqueue_seconds": {
+            "minimum": 0.007404534000670537,
+            "median": 0.0074567950005075545,
+            "maximum": 0.007576395000796765
+          },
+          "synchronized_seconds": {
+            "minimum": 0.014116001000729739,
+            "median": 0.014185318500494759,
+            "maximum": 0.01425197900061903
+          },
+          "event_seconds": {
+            "minimum": 0.014101706504821777,
+            "median": 0.014130788326263428,
+            "maximum": 0.014236227989196777
+          }
+        },
+        "graph": {
+          "enqueue_seconds": {
+            "minimum": 2.5612000172259286e-05,
+            "median": 2.8611500056285877e-05,
+            "maximum": 3.291400025773328e-05
+          },
+          "synchronized_seconds": {
+            "minimum": 0.011428613999669324,
+            "median": 0.011508369500006665,
+            "maximum": 0.01164587800121808
+          },
+          "event_seconds": {
+            "minimum": 0.011381646156311036,
+            "median": 0.011480306625366211,
+            "maximum": 0.011634449005126953
+          }
+        }
+      },
+      "synchronized_median_speedup": 1.2326088852540356
+    }
+  ]
+}

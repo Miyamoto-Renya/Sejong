@@ -1,0 +1,201 @@
+{
+  "byte_training": {
+    "continuous_loss": 6.089296759048011,
+    "directory": ".cache/parameter-vjp-stable-contract",
+    "full_coverage_sgd_max_abs_error": 4.656612873077393e-10,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "resume_optimizer_rng_max_abs_error": 0.0,
+    "resume_roundoff_budget": 7.152588068515015e-07,
+    "resume_weights_max_abs_error": 0.0,
+    "resumed_loss": 6.089296759048011,
+    "steps": 6
+  },
+  "native_value": {
+    "loss": 4.659585811197758,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "parameter_rng_equal": true,
+    "parameter_vjp": {
+      "block_rows": 32,
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "seed": 124
+    },
+    "probability_comparison_budget": 6.294646689111215e-05,
+    "reload_weights_max_abs_error": 0.0,
+    "resume_probability_max_abs_error": 0.0,
+    "resume_weights_max_abs_error": 1.1920928955078125e-07,
+    "resumed_loss": 4.659585811197758,
+    "steps": 2
+  },
+  "kernels": {
+    "register": {
+      "basis_orthogonality_max_abs_error": 1.8861658390711966e-07,
+      "dense_term": true,
+      "device": "AMD Radeon RX 6600",
+      "factored_terms": 2,
+      "gradient_norm": 10.789399871779699,
+      "gradient_norm_upper_bound": 47.49910577870283,
+      "rank": 33,
+      "roundoff_budget": 0.0005473508588184258,
+      "second_rank": 17,
+      "sgd_max_abs_error": 2.3896324641281552e-08,
+      "sgd_relative_squared_error": 1.3621234413838095e-15,
+      "shape": [
+        67,
+        71,
+        97
+      ],
+      "vjp_max_abs_error": 2.117675904911298e-07,
+      "vjp_relative_squared_error": 5.908397371719329e-14
+    },
+    "fused_projection": {
+      "basis_orthogonality_max_abs_error": 1.940029972224977e-07,
+      "dense_term": true,
+      "device": "AMD Radeon RX 6600",
+      "factored_terms": 2,
+      "gradient_norm": 11.796442530003189,
+      "gradient_norm_upper_bound": 38.46794234588591,
+      "rank": 16,
+      "roundoff_budget": 0.0002735409143993416,
+      "second_rank": 8,
+      "sgd_max_abs_error": 2.3032488360996695e-08,
+      "sgd_relative_squared_error": 1.3501511860456784e-15,
+      "shape": [
+        67,
+        96,
+        97
+      ],
+      "vjp_max_abs_error": 2.0966338321048994e-07,
+      "vjp_relative_squared_error": 3.121998651133306e-14
+    },
+    "streaming": {
+      "basis_orthogonality_max_abs_error": 1.5589280288885732e-07,
+      "dense_term": true,
+      "device": "AMD Radeon RX 6600",
+      "factored_terms": 2,
+      "gradient_norm": 10.827501354391725,
+      "gradient_norm_upper_bound": 31.457741342292945,
+      "rank": 33,
+      "roundoff_budget": 0.0020916011147401317,
+      "second_rank": 17,
+      "sgd_max_abs_error": 2.2901565865929285e-08,
+      "sgd_relative_squared_error": 1.366227736739552e-15,
+      "shape": [
+        257,
+        131,
+        97
+      ],
+      "vjp_max_abs_error": 2.2502396712642536e-07,
+      "vjp_relative_squared_error": 1.0900538606285618e-13
+    },
+    "hierarchy": {
+      "attention_error": 1.043081283569336e-07,
+      "cache_error": 2.9802322387695312e-08,
+      "compilations": 32,
+      "compile_seconds": 1.8686260000000001,
+      "device": "AMD Radeon RX 6600",
+      "issued_flops": 780608,
+      "launches": 85,
+      "logical_flops": 16468,
+      "low_rank_error": 1.1920928955078125e-07,
+      "orthogonal_error": 1.1920928955078125e-07,
+      "patch_error": 0.0,
+      "router_error": 2.384185791015625e-07,
+      "top1_gradient_error": 4.470348358154297e-08,
+      "top1_gradient_norm": 0.5386404395103455,
+      "transport_error": 2.9802322387695312e-08
+    }
+  },
+  "native_vjp_statistics": [
+    {
+      "parameter_vjp_statistics": {
+        "basis_groups": 73,
+        "compressed_matrices": 119,
+        "dense_matrices": 40
+      },
+      "step": 1
+    },
+    {
+      "parameter_vjp_statistics": {
+        "basis_groups": 71,
+        "compressed_matrices": 116,
+        "dense_matrices": 25
+      },
+      "step": 2
+    },
+    {
+      "parameter_vjp_statistics": {
+        "basis_groups": 71,
+        "compressed_matrices": 116,
+        "dense_matrices": 25
+      },
+      "step": 2
+    }
+  ],
+  "rust_checks": {
+    "workspace_all_targets": "passed",
+    "workspace_tests_passed": 5
+  }
+}

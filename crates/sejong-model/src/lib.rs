@@ -146,7 +146,7 @@ impl Model {
                 .ok_or_else(|| Error::Message(format!("missing tensor {name}")))?;
             ensure(
                 value.shape == shape && value.dtype == DType::F32,
-                format!("tensor {name} shape or dtype differs from configuration"),
+                format_args!("tensor {name} shape or dtype differs from configuration"),
             )?;
             parameters.push(Parameter {
                 name,
@@ -189,7 +189,7 @@ impl Model {
         let mut compute = Vec::with_capacity(self.parameters.len());
         for (i, p) in self.parameters.iter().enumerate() {
             let selected = self.is_encoder_parameter(i);
-            let leaf = g.leaf(p.value.clone(), trainable && selected);
+            let leaf = g.parameter(p.value.clone(), trainable && selected);
             leaves.push(leaf);
             compute.push(if selected {
                 g.cast(leaf, self.config.precision)?
@@ -212,7 +212,7 @@ impl Model {
         let mut leaves = vec![];
         let mut compute = vec![];
         for p in &self.parameters {
-            let leaf = g.leaf(p.value.clone(), trainable);
+            let leaf = g.parameter(p.value.clone(), trainable);
             let cast = g.cast(leaf, self.config.precision)?;
             leaves.push(leaf);
             compute.push(cast);
@@ -264,15 +264,15 @@ impl Model {
             "input sequence exceeds context or has partial batch",
         )?;
         if self.config.hierarchy.is_some() {
-            let encoded = self.encode(g, b, ids, sequence, injection)?;
-            return self.hidden_from_encoded(g, b, encoded, sequence);
+            let encoded = architecture::encode(self, g, b, ids, sequence, injection)?;
+            return architecture::hidden_from_encoded(self, g, b, encoded, sequence);
         }
         let c = &self.config;
         let mut x = g.embedding(self.w(b, "embedding"), ids, c.precision)?;
         if let Some(input) = injection {
             x = g.add(x, input)?;
         }
-        self.hidden_from(g, b, x, sequence)
+        architecture::hidden_from(self, g, b, x, sequence)
     }
     pub fn hidden_from(&self, g: &mut Graph, b: &Binding, x: Var, sequence: usize) -> Result<Var> {
         ensure(
@@ -401,7 +401,7 @@ impl Model {
     ) -> Result<()> {
         ensure(
             !directory.exists(),
-            format!(
+            format_args!(
                 "artifact destination already exists: {}",
                 directory.display()
             ),
@@ -508,7 +508,7 @@ pub fn load_tensors(engine: &mut Engine, path: &Path) -> Result<BTreeMap<String,
                 tensor.dtype(),
                 safetensors::Dtype::F32 | safetensors::Dtype::F64
             ),
-            format!("tensor {name} requires F32 storage"),
+            format_args!("tensor {name} requires F32 storage"),
         )?;
         if tensor.dtype() == safetensors::Dtype::F64 {
             let values: Vec<f64> = tensor
@@ -530,7 +530,7 @@ pub fn load_tensors(engine: &mut Engine, path: &Path) -> Result<BTreeMap<String,
             .collect();
         ensure(
             values.iter().all(|v| v.is_finite()),
-            format!("tensor {name} contains nonfinite values"),
+            format_args!("tensor {name} contains nonfinite values"),
         )?;
         out.insert(name, engine.from_f32(tensor.shape(), &values)?);
     }

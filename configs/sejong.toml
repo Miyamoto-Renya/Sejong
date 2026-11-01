@@ -1,4 +1,4 @@
-# Sejong 기본 구성: 계층·GQA·전문가 본체와 정확 SGD.
+# Sejong 기본 구성: 계층·GQA·전문가 본체와 순전파 기저·잔차 parameter VJP.
 [model]
 id = "sejong"
 width = 512
@@ -36,11 +36,11 @@ ffn_width = 384
 gradient_diagnostics_every = 0
 optimizer = "sgd"
 clip_enabled = false
-activation_checkpointing = true
+activation_checkpointing = false
 steps = 10000
 sequence = 512
-batch = 1
-accumulation = 8
+batch = 8
+accumulation = 1
 learning_rate = 0.0003
 min_learning_rate = 0.00003
 warmup_steps = 100
@@ -52,6 +52,12 @@ loss_scale = 1.0
 checkpoint_every = 500
 log_every = 10
 seed = 123
+
+[training.parameter_vjp]
+rank = 16
+residual_fraction = 0.25
+block_rows = 32
+seed = 124
 
 [gpu]
 device = 0

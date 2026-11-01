@@ -1,0 +1,14 @@
+{
+  "shape": [
+    4,
+    4
+  ],
+  "element": 1.7014117331926443e+38,
+  "f32_max": 3.4028234663852886e+38,
+  "frobenius_f64": 6.805646932770577e+38,
+  "current_f32_cap_accepts": false,
+  "learning_rate": 0.0009765625,
+  "weight_before": 0,
+  "weight_after_f32": -1.6615348956959417e+35,
+  "all_elements_and_updates_finite": true
+}

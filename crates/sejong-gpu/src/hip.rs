@@ -9,14 +9,14 @@ use std::{
 
 type Handle = *mut c_void;
 macro_rules! hip_api {
-    ($($field:ident: $name:literal => $ty:ty),* $(,)?) => {
-        pub(crate) struct Hip { _library: Library, $(pub $field: $ty,)* }
+    ($($(#[$attribute:meta])* $field:ident: $name:literal => $ty:ty),* $(,)?) => {
+        pub(crate) struct Hip { _library: Library, $($(#[$attribute])* pub $field: $ty,)* }
         impl Hip {
             pub fn load(path: &Path) -> Result<Self> {
                 unsafe {
                     let library = Library::new(path).map_err(|e| Error::Message(format!("HIP library {}: {e}",path.display())))?;
-                    $(let $field = *library.get::<$ty>(concat!($name,"\0").as_bytes()).map_err(|e| Error::Message(e.to_string()))?;)*
-                    Ok(Self { _library: library, $($field,)* })
+                    $($(#[$attribute])* let $field = *library.get::<$ty>(concat!($name,"\0").as_bytes()).map_err(|e| Error::Message(e.to_string()))?;)*
+                    Ok(Self { _library: library, $($(#[$attribute])* $field,)* })
                 }
             }
         }
@@ -26,6 +26,7 @@ hip_api! {
     init: "hipInit" => unsafe extern "C" fn(c_uint)->c_int,
     set_device: "hipSetDevice" => unsafe extern "C" fn(c_int)->c_int,
     device_name: "hipDeviceGetName" => unsafe extern "C" fn(*mut c_char,c_int,c_int)->c_int,
+    device_attribute: "hipDeviceGetAttribute" => unsafe extern "C" fn(*mut c_int,c_int,c_int)->c_int,
     mem_info: "hipMemGetInfo" => unsafe extern "C" fn(*mut usize,*mut usize)->c_int,
     malloc: "hipMalloc" => unsafe extern "C" fn(*mut Handle,usize)->c_int,
     free: "hipFree" => unsafe extern "C" fn(Handle)->c_int,
@@ -33,6 +34,10 @@ hip_api! {
     stream_create: "hipStreamCreate" => unsafe extern "C" fn(*mut Handle)->c_int,
     stream_sync: "hipStreamSynchronize" => unsafe extern "C" fn(Handle)->c_int,
     stream_destroy: "hipStreamDestroy" => unsafe extern "C" fn(Handle)->c_int,
+    event_create: "hipEventCreate" => unsafe extern "C" fn(*mut Handle)->c_int,
+    event_record: "hipEventRecord" => unsafe extern "C" fn(Handle,Handle)->c_int,
+    event_elapsed: "hipEventElapsedTime" => unsafe extern "C" fn(*mut f32,Handle,Handle)->c_int,
+    event_destroy: "hipEventDestroy" => unsafe extern "C" fn(Handle)->c_int,
     module_load: "hipModuleLoadData" => unsafe extern "C" fn(*mut Handle,*const c_void)->c_int,
     module_function: "hipModuleGetFunction" => unsafe extern "C" fn(*mut Handle,Handle,*const c_char)->c_int,
     module_unload: "hipModuleUnload" => unsafe extern "C" fn(Handle)->c_int,
@@ -51,10 +56,67 @@ impl Hip {
     }
 }
 
+pub(crate) struct EventPair {
+    device: Rc<DeviceInner>,
+    start: Handle,
+    end: Handle,
+}
+impl EventPair {
+    pub fn start(device: Rc<DeviceInner>) -> Result<Self> {
+        let mut pair = Self {
+            device,
+            start: std::ptr::null_mut(),
+            end: std::ptr::null_mut(),
+        };
+        unsafe {
+            let hip = &pair.device.hip;
+            hip.check((hip.event_create)(&mut pair.start), "hipEventCreate(start)")?;
+            hip.check((hip.event_create)(&mut pair.end), "hipEventCreate(end)")?;
+            hip.check(
+                (hip.event_record)(pair.start, pair.device.stream),
+                "hipEventRecord(start)",
+            )?;
+        }
+        Ok(pair)
+    }
+    pub fn end(&self) -> Result<()> {
+        unsafe {
+            self.device.hip.check(
+                (self.device.hip.event_record)(self.end, self.device.stream),
+                "hipEventRecord(end)",
+            )
+        }
+    }
+    pub fn seconds(&self) -> Result<f64> {
+        let mut milliseconds = 0.;
+        unsafe {
+            self.device.hip.check(
+                (self.device.hip.event_elapsed)(&mut milliseconds, self.start, self.end),
+                "hipEventElapsedTime",
+            )?;
+        }
+        Ok(f64::from(milliseconds) / 1000.)
+    }
+}
+impl Drop for EventPair {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.start.is_null() {
+                (self.device.hip.event_destroy)(self.start);
+            }
+            if !self.end.is_null() {
+                (self.device.hip.event_destroy)(self.end);
+            }
+        }
+    }
+}
+
 pub(crate) struct DeviceInner {
     pub hip: Hip,
     pub stream: Handle,
     pub name: String,
+    pub registers_per_block: usize,
+    pub shared_memory_per_block: usize,
     budget: usize,
     pool: RefCell<Vec<(Handle, usize)>>,
     allocated: RefCell<usize>,
@@ -76,7 +138,19 @@ impl DeviceInner {
         }
         let mut available = 0;
         let mut total = 0;
+        let mut registers_per_block = 0;
+        let mut shared_memory_per_block = 0;
         unsafe {
+            // ROCm 10.1 hipDeviceAttributeMaxRegistersPerBlock의 ABI 값.
+            hip.check(
+                (hip.device_attribute)(&mut registers_per_block, 71, device),
+                "hipDeviceGetAttribute(registers)",
+            )?;
+            // ROCm 10.1 hipDeviceAttributeMaxSharedMemoryPerBlock의 ABI 값.
+            hip.check(
+                (hip.device_attribute)(&mut shared_memory_per_block, 74, device),
+                "hipDeviceGetAttribute(shared memory)",
+            )?;
             hip.check((hip.mem_info)(&mut available, &mut total), "hipMemGetInfo")?;
         }
         let budget = if budget == 0 {
@@ -92,6 +166,10 @@ impl DeviceInner {
             hip,
             stream,
             name,
+            registers_per_block: usize::try_from(registers_per_block)
+                .map_err(|_| Error::Message("invalid register budget".into()))?,
+            shared_memory_per_block: usize::try_from(shared_memory_per_block)
+                .map_err(|_| Error::Message("invalid shared memory budget".into()))?,
             budget,
             pool: RefCell::new(vec![]),
             allocated: RefCell::new(0),
@@ -134,15 +212,13 @@ impl DeviceInner {
         if self.allocated.borrow().saturating_add(size) > self.budget {
             self.reclaim()?;
         }
-        ensure(
-            self.allocated.borrow().saturating_add(size) <= self.budget,
-            format!(
-                "GPU memory budget exceeded: allocated={} MiB, request={} MiB, budget={} MiB",
-                *self.allocated.borrow() / 1048576,
-                size / 1048576,
-                self.budget / 1048576
-            ),
-        )?;
+        if self.allocated.borrow().saturating_add(size) > self.budget {
+            return Err(Error::Capacity {
+                operation: "GPU allocation".into(),
+                required: size,
+                available: self.budget.saturating_sub(*self.allocated.borrow()),
+            });
+        }
         let mut pointer = std::ptr::null_mut();
         unsafe {
             self.hip

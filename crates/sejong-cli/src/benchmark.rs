@@ -48,7 +48,7 @@ fn runtime_versions() -> Result<json::Value> {
         .map(PathBuf::from)
         .unwrap_or_else(|| sejong_core::root().join(".venv/bin/python"));
     let output = std::process::Command::new(python).args(["-c",
-        "import importlib.metadata as m, json, platform; print(json.dumps({'python':platform.python_version(),'triton':m.version('triton'),'rocm_sdk_core':m.version('rocm-sdk-core'),'torch_installed':any(d.metadata['Name'].lower()=='torch' for d in m.distributions())}))"
+        "import importlib.metadata as m, json, platform; print(json.dumps({'python':platform.python_version(),'triton':m.version('triton'),'rocm_sdk_core':m.version('rocm-sdk-core')}))"
     ]).output()?;
     ensure(
         output.status.success(),
@@ -128,7 +128,7 @@ fn cached_measurement(
     drop(graph);
     let weights = model.inference_weights(engine)?;
     // 첫 실행은 실제 cache 경로의 커널을 준비하고 두 번째 실행을 측정한다.
-    let mut last = Vec::new();
+    let mut last = None;
     let mut prefill_seconds = 0.;
     let mut decode_seconds = Vec::new();
     for pass in 0..2 {
@@ -141,16 +141,16 @@ fn cached_measurement(
             prefill_seconds = start.elapsed().as_secs_f64();
         }
         for token in &input[prefix..] {
-            engine.synchronize()?;
             let start = Instant::now();
             let output = model.forward_cached(engine, &weights, &[*token], &mut cache)?;
             engine.synchronize()?;
             if pass == 1 {
                 decode_seconds.push(start.elapsed().as_secs_f64());
             }
-            last = engine.to_f32(&output)?;
+            last = Some(output);
         }
     }
+    let last = engine.to_f32(&last.unwrap())?;
     let expected = &full[full.len() - last.len()..];
     ensure(
         last.iter().all(|x| x.is_finite()),
@@ -234,7 +234,7 @@ pub fn run(request: Request) -> Result<()> {
             )
         };
         let wall_start = Instant::now();
-        let trained = sejong_train::train(config, &request.data, &destination, None)?;
+        let trained = sejong_train::train_measured(config, &train_corpus, &destination, None)?;
         let complete_training_seconds = wall_start.elapsed().as_secs_f64();
         let execution: json::Value =
             json::from_slice(&std::fs::read(destination.join("execution.json"))?)?;
@@ -277,7 +277,22 @@ pub fn run(request: Request) -> Result<()> {
             })
         };
         let bytes = read_bytes("observed_bytes")?;
-        let exact_bytes = read_bytes("exact_bytes")?;
+        let exact_bytes = if measured.iter().all(|r| r["exact_bytes"].is_number()) {
+            Some(read_bytes("exact_bytes")?)
+        } else {
+            None
+        };
+        let backward_bytes = measured.iter().try_fold(0u64, |total, r| {
+            let value = r["backward_bytes"]
+                .as_u64()
+                .or_else(|| r["exact_bytes"].as_u64())
+                .ok_or_else(|| {
+                    sejong_core::Error::Message("training metrics require backward_bytes".into())
+                })?;
+            total
+                .checked_add(value)
+                .ok_or_else(|| sejong_core::Error::Message("backward byte count overflow".into()))
+        })?;
         let steady_times: Vec<_> = measured
             .iter()
             .zip(&times)
@@ -306,14 +321,15 @@ pub fn run(request: Request) -> Result<()> {
             "initial_validation_bits_per_byte_token":initial_bpb,"final_validation_bits_per_byte_token":final_bpb,
             "warmup_steps":request.warmup_steps,"measured_steps":request.measure_steps,
             "training_step_seconds":distribution(&times),"steps_without_compilation_seconds":distribution(&steady_times),
-            "observed_bytes":bytes,"exact_bytes":exact_bytes,
+            "observed_bytes":bytes,"exact_bytes":exact_bytes,"backward_bytes":backward_bytes,
             "observed_bytes_per_second":bytes as f64 / times.iter().sum::<f64>(),
-            "exact_bytes_per_second":exact_bytes as f64 / times.iter().sum::<f64>(),
+            "exact_bytes_per_second":exact_bytes.map(|bytes|bytes as f64 / times.iter().sum::<f64>()),
+            "backward_bytes_per_second":backward_bytes as f64 / times.iter().sum::<f64>(),
             "complete_training_seconds_including_initialization_and_save":complete_training_seconds,
             "complete_execution":execution,"source_blake3":source_blake3,"executable_blake3":executable_blake3,
             "runtime_versions":runtime_versions,
             "build_profile":if cfg!(debug_assertions) {"debug"} else {"release"},
-            "flops_scope":"executed GEMM and attention dot shapes, FMA=2; pointwise and transfers included in wall time",
+            "flops_scope":"executed GEMM, attention dot and parameter-basis QR arithmetic, FMA=2; pointwise and transfers included in wall time",
             "measured_step_records":measured,"inference":inference,
             "loss_unit":"cross entropy / ln(2), byte vocabulary with document EOS",
             "precision_unit_roundoff":match config.model.precision { DType::F16 => 2f64.powi(-11), _=>2f64.powi(-24)}});

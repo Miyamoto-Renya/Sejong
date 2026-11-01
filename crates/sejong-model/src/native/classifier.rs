@@ -14,7 +14,7 @@ use sejong_gpu::{
     graph::{Graph, Var},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::Path, rc::Rc};
+use std::{cell::RefCell, collections::BTreeMap, path::Path, rc::Rc};
 
 pub const FORMAT: &str = "sejong-role-dynamic-v3";
 #[derive(Clone, Serialize, Deserialize)]
@@ -47,6 +47,15 @@ pub struct Classifier {
     pub config: ModelConfig,
     parameters: Vec<Parameter>,
     encoder: Option<Rc<BertEncoder>>,
+    seal: Option<String>,
+}
+struct FeatureCache {
+    rows: BTreeMap<String, (Rc<Features>, usize)>,
+    bytes: usize,
+    limit: usize,
+}
+thread_local! {
+    static FEATURES: RefCell<Option<FeatureCache>> = const { RefCell::new(None) };
 }
 #[derive(Clone)]
 enum Output {
@@ -257,22 +266,17 @@ impl QueryPlan {
     }
 }
 
-fn host_admit(operation: &str, items: &[(usize, usize)]) -> Result<()> {
-    let required = items.iter().try_fold(0usize, |sum, (count, bytes)| {
-        count
-            .checked_mul(*bytes)
-            .and_then(|n| sum.checked_add(n))
-            .ok_or_else(|| Error::Message(format!("{operation} host size overflow")))
-    })?;
-    let available = sejong_core::native::host_available_bytes()?;
-    if required > available {
-        return Err(Error::Capacity {
-            operation: operation.into(),
-            required,
-            available,
-        });
-    }
-    Ok(())
+fn reserved<T>(length: usize, operation: &str) -> Result<Vec<T>> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(length)
+        .map_err(|error| Error::Message(format!("{operation} allocation: {error}")))?;
+    Ok(values)
+}
+fn filled<T: Clone>(length: usize, value: T, operation: &str) -> Result<Vec<T>> {
+    let mut values = reserved(length, operation)?;
+    values.resize(length, value);
+    Ok(values)
 }
 
 fn layout(role: Role, c: &ModelConfig, input: usize) -> Vec<(String, Vec<usize>, bool)> {
@@ -425,6 +429,9 @@ fn validate_parser_config(config: &ModelConfig) -> Result<()> {
 }
 
 impl Classifier {
+    pub fn open_training(&mut self) {
+        self.seal = None;
+    }
     pub fn initialize(e: &mut Engine, c: ModelConfig, m: ClassifierMetadata) -> Result<Self> {
         Self::initialize_with_encoder(e, c, m, None)
     }
@@ -498,6 +505,7 @@ impl Classifier {
             config: c,
             parameters,
             encoder,
+            seal: None,
         })
     }
     pub fn parameters(&self) -> Vec<Parameter> {
@@ -521,6 +529,11 @@ impl Classifier {
     }
     pub fn encoder_identity(&self) -> Option<&super::bert::EncoderIdentity> {
         self.encoder.as_ref().map(|e| &e.identity)
+    }
+    pub fn encoder_instance_id(&self) -> Option<usize> {
+        self.encoder
+            .as_ref()
+            .map(|encoder| Rc::as_ptr(encoder) as usize)
     }
     pub fn example_memory_bytes(&self, row: &LocalExample) -> Result<usize> {
         fn allocation(elements: u128) -> Result<usize> {
@@ -654,12 +667,31 @@ impl Classifier {
     fn repeat(g: &mut Graph, x: Var, n: usize) -> Result<Var> {
         Self::gather(g, x, &vec![0; n])
     }
-    fn features(&self, e: &mut Engine, row: &LocalExample) -> Result<Features> {
-        let key = json::to_string(&(&row.text, &row.people, &row.predicates))?;
+    fn features(&self, e: &mut Engine, row: &LocalExample) -> Result<Rc<Features>> {
         let encoder = self.encoder.as_ref().unwrap();
-        let digest = blake3::hash(&json::to_vec(&(FORMAT, &encoder.identity.digest, &key))?)
-            .to_hex()
-            .to_string();
+        let key = json::to_string(&(
+            FORMAT,
+            &encoder.identity.digest,
+            &row.text,
+            &row.people,
+            &row.predicates,
+        ))?;
+        if let Some(features) = FEATURES.with(|cache| {
+            cache
+                .borrow()
+                .as_ref()
+                .and_then(|cache| cache.rows.get(&key).map(|(features, _)| features.clone()))
+        }) {
+            return Ok(features);
+        }
+        let disk_key = json::to_string(&(&row.text, &row.people, &row.predicates))?;
+        let digest = blake3::hash(&json::to_vec(&(
+            FORMAT,
+            &encoder.identity.digest,
+            &disk_key,
+        ))?)
+        .to_hex()
+        .to_string();
         let root = sejong_core::root().join(".cache/parser-features-v3");
         let path = root.join(format!("{digest}.json"));
         let slots = row.people.len();
@@ -682,7 +714,39 @@ impl Classifier {
             std::fs::rename(temp, path)?;
             f
         };
-        Ok(f)
+        let features = Rc::new(f);
+        FEATURES.with(|cache| -> Result<()> {
+            let mut cache = cache.borrow_mut();
+            if cache.is_none() {
+                *cache = Some(FeatureCache {
+                    rows: BTreeMap::new(),
+                    bytes: 0,
+                    limit: sejong_core::native::host_available_bytes()?,
+                });
+            }
+            let cache = cache.as_mut().unwrap();
+            let bytes = key
+                .capacity()
+                .saturating_add(features.rows.capacity() * std::mem::size_of::<f32>())
+                .saturating_add(features.present.capacity() * std::mem::size_of::<bool>())
+                .saturating_add(
+                    std::mem::size_of::<Features>()
+                        + std::mem::size_of::<(String, Rc<Features>, usize)>(),
+                );
+            if bytes <= cache.limit {
+                while cache.bytes.saturating_add(bytes) > cache.limit {
+                    if let Some((_, (_, released))) = cache.rows.pop_first() {
+                        cache.bytes -= released;
+                    } else {
+                        break;
+                    }
+                }
+                cache.bytes += bytes;
+                cache.rows.insert(key, (features.clone(), bytes));
+            }
+            Ok(())
+        })?;
+        Ok(features)
     }
     fn role_features(g: &mut Graph, entities: Var, global: Var, n: usize) -> Result<Var> {
         let repeated = Self::repeat(g, global, n)?;
@@ -700,7 +764,7 @@ impl Classifier {
     ) -> Result<(Evaluation, Vec<Var>)> {
         let values: Vec<f64> = g.value(scores)?.into_iter().map(f64::from).collect();
         let (log, p) = logsoftmax(&values)?;
-        let mut law = vec![f64::NEG_INFINITY; size];
+        let mut law = filled(size, f64::NEG_INFINITY, "semantic categorical law")?;
         for (i, value) in indices.iter().zip(log) {
             law[*i] = value;
         }
@@ -761,14 +825,6 @@ impl Classifier {
             .metadata
             .role
             .classes_for(n, self.metadata.meanings.len())?;
-        // Categorical law, conditional law, logits and two identity coordinates per pair.
-        host_admit(
-            "semantic categorical law",
-            &[(
-                classes,
-                3 * std::mem::size_of::<f64>() + 2 * std::mem::size_of::<usize>(),
-            )],
-        )?;
         if n == 0 && self.metadata.role != Role::Request {
             return Ok((
                 Evaluation {
@@ -824,7 +880,7 @@ impl Classifier {
                     .map(f64::from)
                     .collect::<Vec<_>>(),
             )?;
-            let mut law = vec![];
+            let mut law = reserved(classes, "request law")?;
             for a in 0..2 {
                 for b in 0..n + 3 {
                     law.push(logsigmoid(t) + lg[a] + ls[b]);
@@ -847,7 +903,7 @@ impl Classifier {
             ));
         }
         if !features.present.iter().any(|p| *p) {
-            let mut law = vec![f64::NEG_INFINITY; classes];
+            let mut law = filled(classes, f64::NEG_INFINITY, "empty semantic law")?;
             *law.last_mut().unwrap() = 0.;
             return Ok((
                 Evaluation {
@@ -868,8 +924,8 @@ impl Classifier {
         let h = g.gelu(h)?;
         let roles = Self::affine(g, &w, h, "roles.1")?;
         let scores = g.value(roles)?;
-        let mut pair = vec![];
-        let mut logits = vec![];
+        let mut pair = reserved(classes - 1, "semantic pair coordinates")?;
+        let mut logits = reserved(classes - 1, "semantic pair logits")?;
         for a in 0..rows {
             for b in 0..rows {
                 if instruction && a == n && b == n {
@@ -921,17 +977,14 @@ impl Classifier {
         let pooling = slots
             .checked_mul(t)
             .ok_or_else(|| Error::Message("parser pooling size overflow".into()))?;
-        host_admit(
-            "parser positions and identity pooling",
-            &[
-                (tt, 3 * std::mem::size_of::<f32>()),
-                (pooling, std::mem::size_of::<f32>()),
-            ],
-        )?;
         let ids = g.engine.from_i32(&[t], &input.tokens)?;
         let mut x = g.embedding(w["embedding"], &ids, DType::F32)?;
-        let mut distance = Vec::with_capacity(tt * 2);
-        let mut same = Vec::with_capacity(tt);
+        let mut distance = reserved(
+            tt.checked_mul(2)
+                .ok_or_else(|| Error::Message("parser position size overflow".into()))?,
+            "parser distances",
+        )?;
+        let mut same = reserved(tt, "parser identities")?;
         for a in 0..t {
             for b in 0..t {
                 let delta = b as f32 - a as f32;
@@ -971,7 +1024,7 @@ impl Classifier {
         if slots == 0 {
             return Ok((global, None, None));
         }
-        let mut weights = vec![0.; slots * t];
+        let mut weights = filled(pooling, 0., "parser identity pooling")?;
         for slot in 0..slots {
             let count = input.ids.iter().filter(|i| **i == slot as i32).count();
             if count > 0 {
@@ -1018,13 +1071,6 @@ impl Classifier {
             .checked_mul(2)
             .and_then(|n| n.checked_add(1))
             .ok_or_else(|| Error::Message("query root size overflow".into()))?;
-        host_admit(
-            "query root distribution",
-            &[(
-                classes,
-                3 * std::mem::size_of::<f64>() + std::mem::size_of::<(Option<Program>, f64)>(),
-            )],
-        )?;
         let none = Self::affine(g, w, global, "none")?;
         if n == 0 {
             return Ok((none, vec![1.], vec![0.]));
@@ -1045,7 +1091,8 @@ impl Classifier {
         let h = g.gelu(h)?;
         let scores = Self::affine(g, w, h, "root.1")?;
         let scores = g.concat_rows(&[scores, none])?;
-        let mut values: Vec<_> = g.value(scores)?.into_iter().map(f64::from).collect();
+        let mut values = reserved(classes, "query root distribution")?;
+        values.extend(g.value(scores)?.into_iter().map(f64::from));
         for i in 0..2 * n {
             if !present[i % n] {
                 values[i] = f64::NEG_INFINITY;
@@ -1099,13 +1146,6 @@ impl Classifier {
             .checked_mul(4)
             .and_then(|n| n.checked_add(1))
             .ok_or_else(|| Error::Message("query transition size overflow".into()))?;
-        host_admit(
-            "query transition distribution",
-            &[(
-                classes,
-                3 * std::mem::size_of::<f64>() + std::mem::size_of::<(Option<Step>, f64)>(),
-            )],
-        )?;
         if p == 0 {
             return Ok((stop, vec![1.], vec![0.]));
         }
@@ -1126,7 +1166,8 @@ impl Classifier {
         let h = g.gelu(h)?;
         let step = Self::affine(g, w, h, "step.1")?;
         let scores = g.concat_rows(&[step, stop])?;
-        let mut values: Vec<_> = g.value(scores)?.into_iter().map(f64::from).collect();
+        let mut values = reserved(classes, "query transition distribution")?;
+        values.extend(g.value(scores)?.into_iter().map(f64::from));
         for i in 0..p * 4 {
             if !present[i / 4] {
                 values[i] = f64::NEG_INFINITY;
@@ -1298,6 +1339,20 @@ impl Classifier {
                 .all(|s| s.predicate < p && c.present[c.count + s.predicate]),
             "query prefix refers to unobserved predicate",
         )?;
+        self.query_expand_prepared(e, plan, prefix)
+    }
+    /// Extend a prefix emitted by this plan's roots and actions.
+    pub fn query_expand_prepared(
+        &self,
+        e: &mut Engine,
+        plan: &QueryPlan,
+        prefix: &Program,
+    ) -> Result<Vec<(Option<Step>, f64)>> {
+        let c = &plan.context;
+        if prefix.steps.len() >= c.occurrences {
+            return Ok(vec![(None, 1.)]);
+        }
+        let p = c.present.len() - c.count;
         let mut g = Graph::new(e, false);
         let (w, _) = self.bind(&mut g, false);
         let global = g.leaf(c.global.clone(), false);
@@ -1355,9 +1410,12 @@ impl Classifier {
         Ok(v.log_probabilities.iter().map(|x| x.exp()).collect())
     }
     pub fn signature(&self, e: &mut Engine) -> Result<String> {
-        if let Some(encoder) = &self.encoder {
-            encoder.verify(e)?;
+        if let Some(seal) = &self.seal {
+            return Ok(seal.clone());
         }
+        self.compute_signature(e)
+    }
+    fn compute_signature(&self, e: &mut Engine) -> Result<String> {
         signature(
             e,
             &self.parameters,
@@ -1369,7 +1427,23 @@ impl Classifier {
             ),
         )
     }
+    pub fn verify(&self, e: &mut Engine) -> Result<()> {
+        if let Some(encoder) = &self.encoder {
+            encoder.verify(e)?;
+        }
+        self.verify_head(e)
+    }
+    pub fn verify_head(&self, e: &mut Engine) -> Result<()> {
+        if let Some(seal) = &self.seal {
+            ensure(
+                self.compute_signature(e)? == *seal,
+                "semantic head changed after loading",
+            )?;
+        }
+        Ok(())
+    }
     pub fn save(&self, e: &mut Engine, path: &Path) -> Result<()> {
+        let digest = self.signature(e)?;
         atomic_directory(path, |dir| {
             save_tensors(
                 e,
@@ -1388,7 +1462,7 @@ impl Classifier {
                     encoder_digest: self.encoder_identity().map(|x| x.digest.clone()),
                 })?,
             )?;
-            std::fs::write(dir.join("signature"), self.signature(e)?)?;
+            std::fs::write(dir.join("signature"), &digest)?;
             Ok(())
         })
     }
@@ -1437,12 +1511,14 @@ impl Classifier {
             parameters.push(Parameter { name, value });
         }
         ensure(tensors.is_empty(), "unexpected role parameter")?;
-        let model = Self {
+        let mut model = Self {
             metadata: stored.metadata,
             config: stored.config,
             parameters,
             encoder,
+            seal: None,
         };
+        let recorded = std::fs::read_to_string(path.join("signature"))?;
         ensure(
             signature(
                 e,
@@ -1453,9 +1529,12 @@ impl Classifier {
                     format,
                     model.encoder_identity(),
                 ),
-            )? == std::fs::read_to_string(path.join("signature"))?,
+            )? == recorded,
             "role signature differs",
         )?;
+        if format == FORMAT {
+            model.seal = Some(recorded);
+        }
         Ok(model)
     }
 }

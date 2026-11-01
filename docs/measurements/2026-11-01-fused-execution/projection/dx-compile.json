@@ -1,0 +1,32 @@
+[
+  {
+    "key": "matmul_dx",
+    "symbol": "matmul",
+    "shared": 6144,
+    "threads": 128,
+    "vgprs": 127,
+    "sgprs": 28,
+    "private": 0,
+    "global_scratch": 0
+  },
+  {
+    "key": "add_dx",
+    "symbol": "add",
+    "shared": 0,
+    "threads": 128,
+    "vgprs": 8,
+    "sgprs": 10,
+    "private": 0,
+    "global_scratch": 0
+  },
+  {
+    "key": "gate_up_dx",
+    "symbol": "gate_up_dx",
+    "shared": 8192,
+    "threads": 128,
+    "vgprs": 249,
+    "sgprs": 32,
+    "private": 0,
+    "global_scratch": 0
+  }
+]

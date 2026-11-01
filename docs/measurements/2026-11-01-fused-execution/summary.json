@@ -1,0 +1,74 @@
+{
+  "scope": "Independent operator and HIP dispatch-chain measurements; proposed integration plan",
+  "rmsnorm": [
+    {
+      "rows": 64,
+      "width": 512,
+      "calls_per_step": 136,
+      "variant": "partial_rows_4",
+      "atomic_median_us": 16.206683591008186,
+      "partial_median_us": 6.932394579052925,
+      "speedup": 2.3378189752756797,
+      "scratch_bytes": 32768
+    },
+    {
+      "rows": 512,
+      "width": 128,
+      "calls_per_step": 80,
+      "variant": "partial_rows_8",
+      "atomic_median_us": 167.4778237938881,
+      "partial_median_us": 7.682249881327152,
+      "speedup": 21.800621742462162,
+      "scratch_bytes": 32768
+    },
+    {
+      "rows": 512,
+      "width": 512,
+      "calls_per_step": 8,
+      "variant": "partial_rows_8",
+      "atomic_median_us": 144.74330842494965,
+      "partial_median_us": 11.299929581582546,
+      "speedup": 12.809222161956027,
+      "scratch_bytes": 131072
+    }
+  ],
+  "rms_independent_shape_weighted_ms": {
+    "atomic": 16.760281339287758,
+    "partial": 1.6477850899100304
+  },
+  "attention": [
+    {
+      "batch": 1,
+      "sequence": 512,
+      "query_heads": 2,
+      "kv_heads": 2,
+      "head_width": 64,
+      "window": 128,
+      "delta_bytes": 4096,
+      "baseline_median_us": 233.06643962860107,
+      "shared_median_us": 223.44888001680374
+    },
+    {
+      "batch": 1,
+      "sequence": 64,
+      "query_heads": 8,
+      "kv_heads": 4,
+      "head_width": 64,
+      "window": 0,
+      "delta_bytes": 2048,
+      "baseline_median_us": 129.01566177606583,
+      "shared_median_us": 123.96625429391861
+    },
+    {
+      "batch": 2,
+      "sequence": 33,
+      "query_heads": 4,
+      "kv_heads": 2,
+      "head_width": 32,
+      "window": 17,
+      "delta_bytes": 1056,
+      "baseline_median_us": 14.329171739518642,
+      "shared_median_us": 14.256351627409458
+    }
+  ]
+}

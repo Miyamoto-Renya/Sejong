@@ -1,0 +1,247 @@
+[
+  {
+    "kernel": "matmul-fp16-fp16",
+    "signature": {
+      "A": "*fp16",
+      "B": "*fp16",
+      "C": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "TA": false,
+      "TB": false,
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 3072,
+    "vgpr": 114,
+    "sgpr": 21,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 192,
+    "fma32": 0,
+    "hsaco_sha256": "07284d79964300c754bdeb2ccb66aad050beea0a3452253a81f682a7d38c2c82"
+  },
+  {
+    "kernel": "matmul-fp32-fp16",
+    "signature": {
+      "A": "*fp32",
+      "B": "*fp16",
+      "C": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "TA": false,
+      "TB": false,
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 6144,
+    "vgpr": 118,
+    "sgpr": 21,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 0,
+    "fma32": 384,
+    "hsaco_sha256": "fa87e6137c593fe4cdd172291a16a3d17d9f7dcec490bfa4b6e3a856257c6843"
+  },
+  {
+    "kernel": "matmul-fp16-fp32",
+    "signature": {
+      "A": "*fp16",
+      "B": "*fp32",
+      "C": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "TA": false,
+      "TB": false,
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 6144,
+    "vgpr": 126,
+    "sgpr": 22,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 0,
+    "fma32": 256,
+    "hsaco_sha256": "3776b217ed48ed1a90af34aaff68909424a13ae8a7124fac413aa86f2fc2190a"
+  },
+  {
+    "kernel": "matmul-fp32-fp32",
+    "signature": {
+      "A": "*fp32",
+      "B": "*fp32",
+      "C": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "TA": false,
+      "TB": false,
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 6144,
+    "vgpr": 130,
+    "sgpr": 21,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 0,
+    "fma32": 384,
+    "hsaco_sha256": "1930c6951e5aace4843b9aaffca7e2cbdd60993ff32ad212acc0b8b41e5eab29"
+  },
+  {
+    "kernel": "qkv-fp16",
+    "signature": {
+      "X": "*fp16",
+      "WQ": "*fp16",
+      "WK": "*fp16",
+      "WV": "*fp16",
+      "Q": "*fp16",
+      "KOUT": "*fp16",
+      "VOUT": "*fp16",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32",
+      "KV": "i32"
+    },
+    "constants": {
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 7168,
+    "vgpr": 231,
+    "sgpr": 38,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 768,
+    "fma32": 0,
+    "hsaco_sha256": "9b1e862b4f451937349f4389f0d7ef6b04fc964231c8245cf2afcd7f7d4cf534"
+  },
+  {
+    "kernel": "gate-up-fp16",
+    "signature": {
+      "X": "*fp16",
+      "WG": "*fp16",
+      "WU": "*fp16",
+      "G": "*fp16",
+      "U": "*fp16",
+      "H": "*fp16",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 5120,
+    "vgpr": 163,
+    "sgpr": 32,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 384,
+    "fma32": 36,
+    "hsaco_sha256": "307980d080d8b01ddb5152c6296602f41f85040b16bac15402df12e1c1833bde"
+  },
+  {
+    "kernel": "qkv-fp32",
+    "signature": {
+      "X": "*fp32",
+      "WQ": "*fp32",
+      "WK": "*fp32",
+      "WV": "*fp32",
+      "Q": "*fp32",
+      "KOUT": "*fp32",
+      "VOUT": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32",
+      "KV": "i32"
+    },
+    "constants": {
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 14336,
+    "vgpr": 256,
+    "sgpr": 42,
+    "private": 136,
+    "global_scratch": 0,
+    "dot2": 0,
+    "fma32": 1536,
+    "hsaco_sha256": "4dfc809a4a10e2b44ec02d730eb94b89552479bdb03e7d9ab4d2b0e184cf65a5"
+  },
+  {
+    "kernel": "gate-up-fp32",
+    "signature": {
+      "X": "*fp32",
+      "WG": "*fp32",
+      "WU": "*fp32",
+      "G": "*fp32",
+      "U": "*fp32",
+      "H": "*fp32",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32"
+    },
+    "constants": {
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 10240,
+    "vgpr": 244,
+    "sgpr": 32,
+    "private": 0,
+    "global_scratch": 0,
+    "dot2": 0,
+    "fma32": 796,
+    "hsaco_sha256": "bf292f51e79e134b977daf2469eb9f3d07b95c15f2796fecd8fe5a6010e42136"
+  },
+  {
+    "kernel": "qkv-mixed-k32",
+    "signature": {
+      "X": "*fp16",
+      "WQ": "*fp16",
+      "WK": "*fp32",
+      "WV": "*fp16",
+      "Q": "*fp16",
+      "KOUT": "*fp16",
+      "VOUT": "*fp16",
+      "M": "i32",
+      "N": "i32",
+      "K": "i32",
+      "KV": "i32"
+    },
+    "constants": {
+      "BM": 16,
+      "BN": 32,
+      "BK": 32
+    },
+    "shared": 10240,
+    "vgpr": 256,
+    "sgpr": 42,
+    "private": 20,
+    "global_scratch": 0,
+    "dot2": 576,
+    "fma32": 384,
+    "hsaco_sha256": "483e890d2ebe8722850a8f9b9861663dca68e620b996122a89f3565e14226bf7"
+  }
+]

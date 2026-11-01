@@ -163,20 +163,16 @@ fn logaddexp(a: f64, b: f64) -> f64 {
     let m = a.max(b);
     m + ((a - m).exp() + (b - m).exp()).ln()
 }
-/// Jensen-Shannon and its derivatives with respect to the two normalized log laws.
+/// Jensen-Shannon and its derivatives for a prepared coordinate mapping.
 fn consistency(
     left: &[f64],
     right: &[f64],
-    mapping: &[usize],
-) -> Result<(f64, Vec<f64>, Vec<f64>)> {
-    ensure(
-        left.len() == right.len() && right.len() == mapping.len(),
-        "paired law dimensions differ",
-    )?;
+    mapping: impl Fn(usize) -> usize,
+) -> (f64, Vec<f64>, Vec<f64>) {
     let mut aligned = vec![f64::NEG_INFINITY; left.len()];
-    for (i, j) in mapping.iter().enumerate() {
-        ensure(*j < aligned.len(), "paired class coordinate outside law")?;
-        aligned[*j] = logaddexp(aligned[*j], right[i]);
+    for (i, q) in right.iter().enumerate() {
+        let j = mapping(i);
+        aligned[j] = logaddexp(aligned[j], *q);
     }
     let mut dl = vec![0.; left.len()];
     let mut dr = vec![0.; right.len()];
@@ -191,13 +187,146 @@ fn consistency(
     }
     for (i, q) in right.iter().enumerate() {
         if q.is_finite() {
-            let log_mean = logaddexp(left[mapping[i]], *q) - 2f64.ln();
+            let log_mean = logaddexp(left[mapping(i)], *q) - 2f64.ln();
             let term = q.exp() * (*q - log_mean) / 2.;
             loss += term;
             dr[i] = term;
         }
     }
-    Ok((loss, dl, dr))
+    (loss, dl, dr)
+}
+enum ClassCoordinates {
+    Scene(Vec<usize>),
+    Instruction(Vec<usize>),
+    Request(Vec<usize>),
+    Lexical,
+}
+impl ClassCoordinates {
+    fn prepare(role: Role, source: &LocalExample, target: &LocalExample) -> Result<Self> {
+        let people = (0..source.people.len())
+            .map(|i| remap(i, &source.people, &target.people))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(match role {
+            Role::Scene => Self::Scene(people),
+            Role::Instruction => Self::Instruction(people),
+            Role::Request => Self::Request(people),
+            Role::Lexical => Self::Lexical,
+            Role::Query => {
+                return Err(Error::Message(
+                    "query alignment uses conditional coordinates".into(),
+                ));
+            }
+        })
+    }
+    fn map(&self, index: usize) -> usize {
+        match self {
+            Self::Scene(people) => {
+                let n = people.len();
+                if index == n * n {
+                    index
+                } else {
+                    people[index / n] * n + people[index % n]
+                }
+            }
+            Self::Instruction(people) => {
+                let n = people.len();
+                let slots = n + 1;
+                let (a, b) = (index / slots, index % slots);
+                (if a == n { n } else { people[a] }) * slots + if b == n { n } else { people[b] }
+            }
+            Self::Request(people) => {
+                let n = people.len();
+                let slots = n + 3;
+                if index == 2 * slots {
+                    index
+                } else {
+                    index / slots * slots
+                        + if index % slots < n {
+                            people[index % slots]
+                        } else {
+                            index % slots
+                        }
+                }
+            }
+            Self::Lexical => index,
+        }
+    }
+}
+enum PairObjective {
+    Supervised,
+    QueryConsistency {
+        root: Vec<usize>,
+        action: Vec<usize>,
+    },
+    QueryContrast([Option<LocalExample>; 2]),
+    ClassConsistency(ClassCoordinates),
+    ClassContrast([usize; 2]),
+}
+struct PairPlan {
+    weights: [f64; 2],
+    targets: [usize; 2],
+    objective: PairObjective,
+}
+impl PairPlan {
+    fn prepare(model: &Classifier, spec: &RoleTraining, pair: &RolePair) -> Result<Self> {
+        inventories(&pair.left, &pair.right)?;
+        let names = if pair.equivalent {
+            ["supervised", "consistency"]
+        } else {
+            ["supervised", "contrast"]
+        };
+        let weights = spec.loss.normalized(&names)?;
+        let targets = [
+            model.target_index(&pair.left),
+            model.target_index(&pair.right),
+        ];
+        let objective = if weights[1] == 0. {
+            PairObjective::Supervised
+        } else if spec.role == Role::Query {
+            if pair.equivalent {
+                ensure(
+                    program_remap(&pair.right.program, &pair.right, &pair.left)?
+                        == pair.left.program,
+                    "equivalent query views require aligned target programs",
+                )?;
+                PairObjective::QueryConsistency {
+                    root: query_mapping(&pair.right, &pair.left, 0)?,
+                    action: query_mapping(&pair.right, &pair.left, 1)?,
+                }
+            } else {
+                let mut alternates = [None, None];
+                for (slot, source, target) in
+                    [(0, &pair.right, &pair.left), (1, &pair.left, &pair.right)]
+                {
+                    let alternate = program_remap(&source.program, source, target)?;
+                    if alternate != target.program && model.supports_program(target, &alternate)? {
+                        let mut row = target.clone();
+                        row.program = alternate;
+                        alternates[slot] = Some(row);
+                    }
+                }
+                PairObjective::QueryContrast(alternates)
+            }
+        } else {
+            if pair.equivalent {
+                PairObjective::ClassConsistency(ClassCoordinates::prepare(
+                    spec.role,
+                    &pair.right,
+                    &pair.left,
+                )?)
+            } else {
+                PairObjective::ClassContrast([
+                    aligned(spec.role, &pair.right, &pair.left, targets[1])?,
+                    aligned(spec.role, &pair.left, &pair.right, targets[0])?,
+                ])
+            }
+        };
+        Ok(Self {
+            weights: [weights[0], weights[1]],
+            targets,
+            objective,
+        })
+    }
 }
 fn softplus(x: f64) -> f64 {
     if x > 0. {
@@ -254,50 +383,44 @@ fn supervised(
 fn pair_loss(
     g: &mut Graph,
     model: &Classifier,
-    spec: &RoleTraining,
     pair: &RolePair,
+    plan: &PairPlan,
     scale: f64,
 ) -> Result<(f64, Vec<Option<Tensor>>)> {
-    inventories(&pair.left, &pair.right)?;
-    let names = if pair.equivalent {
-        ["supervised", "consistency"]
-    } else {
-        ["supervised", "contrast"]
-    };
-    let weights = spec.loss.normalized(&names)?;
+    let weights = plan.weights;
     let (left, lv) = model.evaluate(g, &pair.left, true)?;
     let (right, rv) = model.evaluate(g, &pair.right, true)?;
-    let li = model.target_index(&pair.left);
-    let ri = model.target_index(&pair.right);
-    ensure(
-        left.log_probabilities[li].is_finite() && right.log_probabilities[ri].is_finite(),
-        "paired target lies outside observed identities/program grammar",
-    )?;
+    let [li, ri] = plan.targets;
     let mut leaves = vec![lv, rv];
     let mut dl = vec![0.; left.log_probabilities.len()];
     let mut dr = vec![0.; right.log_probabilities.len()];
-    dl[li] = -weights[0] * scale / 2.;
-    dr[ri] = -weights[0] * scale / 2.;
-    let mut loss =
-        -(left.log_probabilities[li] + right.log_probabilities[ri]) * weights[0] * scale / 2.;
+    let mut loss = 0.;
+    let mut seed_left = weights[0] > 0.;
+    let mut seed_right = seed_left;
+    if weights[0] > 0. {
+        ensure(
+            left.log_probabilities[li].is_finite() && right.log_probabilities[ri].is_finite(),
+            "paired target lies outside observed identities/program grammar",
+        )?;
+        dl[li] = -weights[0] * scale / 2.;
+        dr[ri] = -weights[0] * scale / 2.;
+        loss =
+            -(left.log_probabilities[li] + right.log_probabilities[ri]) * weights[0] * scale / 2.;
+    }
     let mut roots = vec![];
-    if model.metadata.role == Role::Query {
-        if pair.equivalent {
-            ensure(
-                program_remap(&pair.right.program, &pair.right, &pair.left)? == pair.left.program,
-                "equivalent query views require aligned target programs",
-            )?;
+    match &plan.objective {
+        PairObjective::Supervised => {}
+        PairObjective::QueryConsistency { root, action } => {
             let lc = left.conditionals().unwrap();
             let rc = right.conditionals().unwrap();
-            ensure(lc.len() == rc.len(), "paired query path lengths differ")?;
             let factor = weights[1] * scale / lc.len() as f64;
             let mut a = vec![];
             let mut b = vec![];
             for node in 0..lc.len() {
-                let mapping = query_mapping(&pair.right, &pair.left, node)?;
+                let mapping = if node == 0 { root } else { action };
                 let log_l: Vec<_> = lc[node].iter().map(|p| p.ln()).collect();
                 let log_r: Vec<_> = rc[node].iter().map(|p| p.ln()).collect();
-                let (value, mut da, mut db) = consistency(&log_l, &log_r, &mapping)?;
+                let (value, mut da, mut db) = consistency(&log_l, &log_r, |i| mapping[i]);
                 loss += value * factor;
                 for x in da.iter_mut().chain(&mut db) {
                     *x *= factor;
@@ -307,34 +430,30 @@ fn pair_loss(
             }
             roots.extend(left.seed_conditionals(g, &a)?);
             roots.extend(right.seed_conditionals(g, &b)?);
-        } else {
-            for (gold, source, target, derivative) in [
-                (&left, &pair.right, &pair.left, &mut dl),
-                (&right, &pair.left, &pair.right, &mut dr),
+        }
+        PairObjective::QueryContrast(alternates) => {
+            for (row, gold, derivative, seed) in [
+                (&alternates[0], &left, &mut dl, &mut seed_left),
+                (&alternates[1], &right, &mut dr, &mut seed_right),
             ] {
-                let alternate = program_remap(&source.program, source, target)?;
-                if alternate == target.program || !model.supports_program(target, &alternate)? {
-                    continue;
+                if let Some(row) = row {
+                    let (other, vars) = model.evaluate(g, row, true)?;
+                    leaves.push(vars);
+                    let delta = other.log_probabilities[0] - gold.log_probabilities[0];
+                    let factor = weights[1] * scale / 2.;
+                    loss += factor * softplus(delta);
+                    let gradient = factor * sigmoid(delta);
+                    derivative[0] -= gradient;
+                    *seed = true;
+                    roots.extend(other.seed(g, &[gradient])?);
                 }
-                let mut row = target.clone();
-                row.program = alternate;
-                let (other, vars) = model.evaluate(g, &row, true)?;
-                leaves.push(vars);
-                let delta = other.log_probabilities[0] - gold.log_probabilities[0];
-                let factor = weights[1] * scale / 2.;
-                loss += factor * softplus(delta);
-                let gradient = factor * sigmoid(delta);
-                derivative[0] -= gradient;
-                roots.extend(other.seed(g, &[gradient])?);
             }
         }
-    } else {
-        let mapping = (0..right.log_probabilities.len())
-            .map(|i| aligned(spec.role, &pair.right, &pair.left, i))
-            .collect::<Result<Vec<_>>>()?;
-        if pair.equivalent {
+        PairObjective::ClassConsistency(mapping) => {
             let (value, a, b) =
-                consistency(&left.log_probabilities, &right.log_probabilities, &mapping)?;
+                consistency(&left.log_probabilities, &right.log_probabilities, |i| {
+                    mapping.map(i)
+                });
             loss += value * weights[1] * scale;
             for (i, a) in a.iter().enumerate() {
                 dl[i] += a * weights[1] * scale;
@@ -342,12 +461,13 @@ fn pair_loss(
             for (i, b) in b.iter().enumerate() {
                 dr[i] += b * weights[1] * scale;
             }
-        } else {
-            let other_left = mapping[ri];
-            let other_right = aligned(spec.role, &pair.left, &pair.right, li)?;
-            for (law, derivative, gold, other) in [
-                (&left, &mut dl, li, other_left),
-                (&right, &mut dr, ri, other_right),
+            seed_left = true;
+            seed_right = true;
+        }
+        PairObjective::ClassContrast(others) => {
+            for (law, derivative, gold, other, seed) in [
+                (&left, &mut dl, li, others[0], &mut seed_left),
+                (&right, &mut dr, ri, others[1], &mut seed_right),
             ] {
                 if gold != other {
                     let delta = law.log_probabilities[other] - law.log_probabilities[gold];
@@ -356,12 +476,17 @@ fn pair_loss(
                     let gradient = factor * sigmoid(delta);
                     derivative[gold] -= gradient;
                     derivative[other] += gradient;
+                    *seed = true;
                 }
             }
         }
     }
-    roots.extend(left.seed(g, &dl)?);
-    roots.extend(right.seed(g, &dr)?);
+    if seed_left {
+        roots.extend(left.seed(g, &dl)?);
+    }
+    if seed_right {
+        roots.extend(right.seed(g, &dr)?);
+    }
     g.backward_seeded(&roots)?;
     Ok((loss, gradient_sum(g, &leaves, model.parameters().len())?))
 }
@@ -409,7 +534,7 @@ pub fn train_role_resume(
 ) -> Result<Classifier> {
     ensure(
         !out.exists(),
-        format!("output already exists: {}", out.display()),
+        format_args!("output already exists: {}", out.display()),
     )?;
     ensure(
         spec.steps > 0 && spec.learning_rate.is_finite() && spec.learning_rate > 0.,
@@ -478,25 +603,32 @@ pub fn train_role_resume(
         let optimizer = Adam::new(e, &model.parameters())?;
         (model, optimizer, Rng::new(spec.model.seed), None)
     };
+    model.open_training();
     ensure(
         optimizer.step < spec.steps,
         "role checkpoint has reached target steps",
     )?;
+    let pair_plans = spec
+        .pairs
+        .iter()
+        .map(|pair| PairPlan::prepare(&model, spec, pair))
+        .collect::<Result<Vec<_>>>()?;
     let mut cost = 0;
     for row in &spec.examples {
         cost = cost.max(model.example_memory_bytes(row)?);
     }
-    for pair in &spec.pairs {
-        let views = if spec.role == Role::Query && !pair.equivalent {
-            2
-        } else {
-            1
-        };
-        let pair_cost = model
+    for (pair, plan) in spec.pairs.iter().zip(&pair_plans) {
+        let mut pair_cost = model
             .example_memory_bytes(&pair.left)?
             .checked_add(model.example_memory_bytes(&pair.right)?)
-            .and_then(|n| n.checked_mul(views))
             .ok_or_else(|| Error::Message("pair memory size overflow".into()))?;
+        if let PairObjective::QueryContrast(alternates) = &plan.objective {
+            for row in alternates.iter().flatten() {
+                pair_cost = pair_cost
+                    .checked_add(model.example_memory_bytes(row)?)
+                    .ok_or_else(|| Error::Message("pair memory size overflow".into()))?;
+            }
+        }
         cost = cost.max(pair_cost);
     }
     let mut policy = spec.batch.clone();
@@ -542,8 +674,8 @@ pub fn train_role_resume(
                 pair_loss(
                     &mut graph,
                     &model,
-                    spec,
                     &spec.pairs[index - spec.examples.len()],
+                    &pair_plans[index - spec.examples.len()],
                     1. / batch as f64,
                 )?
             };

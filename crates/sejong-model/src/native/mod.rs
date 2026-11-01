@@ -3,7 +3,7 @@ pub mod classifier;
 pub mod memory;
 pub mod value;
 use crate::Parameter;
-use sejong_core::{Result, ensure, json};
+use sejong_core::{DType, Error, Result, json};
 use sejong_gpu::Engine;
 use std::path::Path;
 
@@ -18,17 +18,33 @@ pub fn signature(
         h.update(p.name.as_bytes());
         h.update(&json::to_vec(&p.value.shape)?);
         h.update(&json::to_vec(&p.value.dtype)?);
-        for v in engine.to_f64(&p.value)? {
-            h.update(&v.to_le_bytes());
+        match p.value.dtype {
+            DType::F64 => {
+                for value in engine.to_f64(&p.value)? {
+                    h.update(&value.to_le_bytes());
+                }
+            }
+            DType::F32 | DType::F16 => {
+                for value in engine.to_f32(&p.value)? {
+                    h.update(&f64::from(value).to_le_bytes());
+                }
+            }
+            DType::I32 => {
+                for value in engine.to_i32(&p.value)? {
+                    h.update(&f64::from(value).to_le_bytes());
+                }
+            }
         }
     }
     Ok(h.finalize().to_hex().to_string())
 }
 pub fn atomic_directory(path: &Path, write: impl FnOnce(&Path) -> Result<()>) -> Result<()> {
-    ensure(
-        !path.exists(),
-        format!("output already exists: {}", path.display()),
-    )?;
+    if path.exists() {
+        return Err(Error::Message(format!(
+            "output already exists: {}",
+            path.display()
+        )));
+    }
     let parent = path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())

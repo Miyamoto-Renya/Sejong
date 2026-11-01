@@ -75,10 +75,6 @@ impl Corpus {
         batch: usize,
         sequence: usize,
     ) -> Result<(Vec<i32>, Vec<i32>)> {
-        ensure(
-            self.tokens > sequence,
-            "corpus must contain more bytes than training sequence",
-        )?;
         let mut input = Vec::with_capacity(batch * sequence);
         let mut target = Vec::with_capacity(batch * sequence);
         for _ in 0..batch {
@@ -206,18 +202,19 @@ impl Adam {
         parameters: &[sejong_model::Parameter],
         config: &TrainConfig,
         lr: f32,
-    ) -> Result<f64> {
-        let mut norm = 0.;
-        for gradient in self.gradients.iter().flatten() {
-            norm += engine.squared_norm(gradient)?;
-        }
-        norm = norm.sqrt() / config.loss_scale as f64;
-        ensure(norm.is_finite(), "nonfinite gradient norm; update aborted")?;
-        let clipping = if config.clip_enabled && norm > config.clip_norm as f64 {
-            config.clip_norm as f64 / norm
+    ) -> Result<Option<f64>> {
+        let diagnostics = config.gradient_diagnostics_every > 0
+            && (self.step + 1).is_multiple_of(config.gradient_diagnostics_every);
+        let norm = if config.clip_enabled || diagnostics {
+            let value = engine.gradient_norm(&self.gradients)? / config.loss_scale as f64;
+            ensure(value.is_finite(), "nonfinite clipping gradient")?;
+            Some(value)
         } else {
-            1.
+            None
         };
+        let clipping = norm
+            .filter(|n| config.clip_enabled && *n > config.clip_norm as f64)
+            .map_or(1., |n| config.clip_norm as f64 / n);
         let scale = clipping as f32 / config.loss_scale;
         self.step += 1;
         for (i, p) in parameters.iter().enumerate() {
@@ -255,16 +252,38 @@ pub struct TrainingSummary {
     pub model_directory: PathBuf,
 }
 
+pub(crate) fn counter_metrics(
+    engine: &Engine,
+    counters: &sejong_gpu::ExecutionCounters,
+) -> Option<json::Value> {
+    engine.metrics_enabled().then(|| json::json!({
+        "launches":counters.launches,"logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,
+        "gemm_launches":counters.gemm_launches,"attention_launches":counters.attention_launches,
+        "compilations":counters.compilations,"compile_seconds":counters.compile_seconds,
+    }))
+}
+
 fn save_execution_metrics(engine: &Engine, output: &Path, elapsed_seconds: f64) -> Result<()> {
+    if let Some(profile) = engine.kernel_profile()? {
+        std::fs::write(
+            output.join("kernel-profile.json"),
+            json::to_vec_pretty(&profile)?,
+        )?;
+    }
     let counters = engine.execution_counters();
-    let metrics = json::json!({
-        "elapsed_seconds":elapsed_seconds,
-        "scope":"initialization_training_basis_refresh_checkpoint_flush_and_save",
-        "logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,
-        "launches":counters.launches,"gemm_launches":counters.gemm_launches,
-        "attention_launches":counters.attention_launches,"compilations":counters.compilations,
-        "compile_seconds":counters.compile_seconds
-    });
+    let metrics = if engine.metrics_enabled() {
+        json::json!({
+            "elapsed_seconds":elapsed_seconds,"metrics_collected":true,
+            "scope":"initialization_training_basis_refresh_checkpoint_flush_and_save",
+            "logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,
+            "launches":counters.launches,"gemm_launches":counters.gemm_launches,
+            "attention_launches":counters.attention_launches,"compilations":counters.compilations,
+            "compile_seconds":counters.compile_seconds,
+        })
+    } else {
+        json::json!({"elapsed_seconds":elapsed_seconds,"metrics_collected":false,
+        "scope":"initialization_training_checkpoint_and_save"})
+    };
     std::fs::write(
         output.join("execution.json"),
         json::to_vec_pretty(&metrics)?,
@@ -277,22 +296,40 @@ pub fn train(
     output: &Path,
     resume: Option<&Path>,
 ) -> Result<TrainingSummary> {
+    let corpus = Corpus::open(data)?;
+    train_configured(config, &corpus, output, resume, false)
+}
+pub fn train_measured(
+    config: &Config,
+    corpus: &Corpus,
+    output: &Path,
+    resume: Option<&Path>,
+) -> Result<TrainingSummary> {
+    train_configured(config, corpus, output, resume, true)
+}
+fn train_configured(
+    config: &Config,
+    corpus: &Corpus,
+    output: &Path,
+    resume: Option<&Path>,
+    metrics: bool,
+) -> Result<TrainingSummary> {
     if config.training.optimizer != sejong_core::OptimizerKind::Adamw {
-        return control_variate::train(config, data, output, resume);
+        return control_variate::train_configured(config, corpus, output, resume, metrics);
     }
     let complete_started = Instant::now();
     config.model.validate()?;
     config.training.validate(&config.model)?;
     ensure(
         !output.exists(),
-        format!("training destination already exists: {}", output.display()),
+        format_args!("training destination already exists: {}", output.display()),
     )?;
-    let corpus = Corpus::open(data)?;
     ensure(
         corpus.tokens > config.training.sequence,
         "corpus is shorter than the training sequence",
     )?;
     let mut engine = Engine::new(config.gpu.clone())?;
+    engine.enable_execution_metrics(metrics);
     let (model, mut optimizer, mut rng) = if let Some(directory) = resume {
         let (model, manifest) = Model::load(&mut engine, directory)?;
         ensure(
@@ -335,7 +372,7 @@ pub fn train(
     )?;
     std::fs::create_dir_all(output)?;
     std::fs::write(output.join("config.json"), json::to_vec_pretty(config)?)?;
-    let mut log = std::fs::File::create(output.join("metrics.jsonl"))?;
+    let mut log = std::io::BufWriter::new(std::fs::File::create(output.join("metrics.jsonl"))?);
     eprintln!(
         "Sejong {} | {} parameters | {} | {} corpus tokens",
         model.config.id,
@@ -346,12 +383,12 @@ pub fn train(
     let start = Instant::now();
     let mut last_loss = 0.;
     let tc = &config.training;
+    engine.synchronize()?;
     while optimizer.step < tc.steps {
-        engine.synchronize()?;
         let counters_before = engine.execution_counters();
         let step_started = Instant::now();
-        let mut loss = 0.;
-        for _ in 0..tc.accumulation {
+        let summaries = engine.empty(&[tc.accumulation], DType::F64)?;
+        for observation in 0..tc.accumulation {
             let (input, target) = corpus.batch(&mut rng, tc.batch, tc.sequence)?;
             let ids = engine.from_i32(&[input.len()], &input)?;
             let targets = engine.from_i32(&[target.len()], &target)?;
@@ -360,10 +397,13 @@ pub fn train(
             let binding = model.bind(&mut graph, true)?;
             let logits = model.logits(&mut graph, &binding, &ids, tc.sequence)?;
             let objective = graph.cross_entropy(logits, &targets)?;
-            let values = graph.value(objective)?;
-            let batch_loss = values.iter().map(|v| *v as f64).sum::<f64>() / values.len() as f64;
-            ensure(batch_loss.is_finite(), "nonfinite training loss")?;
-            loss += batch_loss / tc.accumulation as f64;
+            let loss_tensor = graph.tensor(objective).clone();
+            graph.engine.loss_summary(
+                &loss_tensor,
+                &summaries,
+                observation,
+                1. / tc.accumulation as f32,
+            )?;
             graph.backward(&[(objective, tc.loss_scale / tc.accumulation as f32)])?;
             let gradients = binding
                 .leaves
@@ -373,28 +413,24 @@ pub fn train(
             drop(graph);
             optimizer.accumulate(&mut engine, gradients)?;
         }
+        let loss = engine.to_f64(&summaries)?.iter().sum::<f64>();
         let lr = tc.lr(optimizer.step);
         let norm = optimizer.update(&mut engine, &model.parameters, tc, lr)?;
         last_loss = loss;
         engine.synchronize()?;
         let step_seconds = step_started.elapsed().as_secs_f64();
         let counters = engine.execution_counters().difference(&counters_before);
-        let record = json::json!({
-            "step":optimizer.step,"optimizer":"adamw","loss":loss,"gradient_norm":norm,"learning_rate":lr,
-            "step_seconds":step_seconds,"observed_bytes":tc.accumulation*tc.batch*tc.sequence,
-            "exact_bytes":tc.accumulation*tc.batch*tc.sequence,"elapsed_seconds":start.elapsed().as_secs_f64(),
-            "peak_gpu_mib":engine.peak_bytes()/1048576,"counters":{
-                "logical_flops":counters.logical_flops,"issued_flops":counters.issued_flops,"launches":counters.launches,
-                "compilations":counters.compilations,"compile_seconds":counters.compile_seconds,
-                "gemm_launches":counters.gemm_launches,"attention_launches":counters.attention_launches
-            }
-        });
-        writeln!(log, "{record}")?;
-        log.flush()?;
         if optimizer.step == 1
             || optimizer.step.is_multiple_of(tc.log_every)
             || optimizer.step == tc.steps
         {
+            let record = json::json!({
+                "step":optimizer.step,"optimizer":"adamw","loss":loss,"gradient_norm":norm,"learning_rate":lr,
+                "step_seconds":step_seconds,"observed_bytes":tc.accumulation*tc.batch*tc.sequence,
+                "exact_bytes":tc.accumulation*tc.batch*tc.sequence,"elapsed_seconds":start.elapsed().as_secs_f64(),
+                "peak_gpu_mib":engine.peak_bytes()/1048576,"counters":counter_metrics(&engine,&counters)
+            });
+            writeln!(log, "{record}")?;
             eprintln!("{record}");
         }
         if tc.checkpoint_every > 0
@@ -415,6 +451,7 @@ pub fn train(
             )?;
         }
     }
+    log.flush()?;
     let directory = output.join("model");
     save_training(
         &model,

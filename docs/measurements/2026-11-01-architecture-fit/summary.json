@@ -1,0 +1,1538 @@
+{
+  "baseline": {
+    "mean_ms": 226.08865898437494,
+    "median_ms": 226.2797975,
+    "logical_gflops": 94.126014464,
+    "issued_gflops": 106.498555904,
+    "launches": 12908.125,
+    "peak_mib": 472,
+    "bpb": 7.9348758879345604,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 15.536546403,
+    "source_blake3": "50c78cb48e6130c3915ed321bfb90907000f2cccf99c9a800801bdbd6d002c44",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 0.0,
+    "speedup_vs_baseline": 1.0,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1167,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 9
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 11
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 5
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "retain": {
+    "mean_ms": 190.81667867187497,
+    "median_ms": 190.7203215,
+    "logical_gflops": 77.730480128,
+    "issued_gflops": 87.795892224,
+    "launches": 11044.625,
+    "peak_mib": 483,
+    "bpb": 7.9348758879345604,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 13.18110579,
+    "source_blake3": "50c78cb48e6130c3915ed321bfb90907000f2cccf99c9a800801bdbd6d002c44",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 15.60095073806318,
+    "speedup_vs_baseline": 1.1848474701373095,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1167,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 9
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 11
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 5
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "mirror": {
+    "mean_ms": 181.14450937499996,
+    "median_ms": 180.84218800000002,
+    "logical_gflops": 77.730480128,
+    "issued_gflops": 87.795892224,
+    "launches": 9644.625,
+    "peak_mib": 483,
+    "bpb": 7.9348758879345604,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 12.565857282,
+    "source_blake3": "b97838c72750b601436af2f9061a8add030e7b5c0b9949f01c794dcf6a628214",
+    "executable_blake3": "15e05b0fcf5bd9af1bef5fbaf2e0cb84d18670aa5a6b3182be43acb2893440b7",
+    "reduction_vs_baseline_percent": 19.878993405184954,
+    "speedup_vs_baseline": 1.2481121275187699,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1167,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 9
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 11
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 5
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "dot2": {
+    "mean_ms": 179.90626117187497,
+    "median_ms": 179.96140100000002,
+    "logical_gflops": 77.730480128,
+    "issued_gflops": 87.801790464,
+    "launches": 11045.21875,
+    "peak_mib": 483,
+    "bpb": 7.934891178603017,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 15.132418474,
+    "source_blake3": "dee57100e351b6a6ccd50836bcbb71fae9d2b445ce036d423f0af93cd26e6e64",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 20.426675986296004,
+    "speedup_vs_baseline": 1.256702560053645,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1167,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 9
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 10
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 7
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "combined": {
+    "mean_ms": 170.271534421875,
+    "median_ms": 170.21104749999998,
+    "logical_gflops": 77.730480128,
+    "issued_gflops": 87.801790464,
+    "launches": 9645.21875,
+    "peak_mib": 483,
+    "bpb": 7.934891178603017,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 11.849223138,
+    "source_blake3": "b399ed04fbbc5f70fc06212e9fc6c9a98f5d3c73a55caff29d8ef27554d11b55",
+    "executable_blake3": "15e05b0fcf5bd9af1bef5fbaf2e0cb84d18670aa5a6b3182be43acb2893440b7",
+    "reduction_vs_baseline_percent": 24.688157651621733,
+    "speedup_vs_baseline": 1.3278124247368563,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1167,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 9
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 10
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 7
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "retain-b4": {
+    "mean_ms": 129.478095609375,
+    "median_ms": 129.667358,
+    "logical_gflops": 77.614874624,
+    "issued_gflops": 81.618468864,
+    "launches": 2826.625,
+    "peak_mib": 579,
+    "bpb": 7.934958267456372,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 12.089678301,
+    "source_blake3": "50c78cb48e6130c3915ed321bfb90907000f2cccf99c9a800801bdbd6d002c44",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 42.73127356718797,
+    "speedup_vs_baseline": 1.7461537252329247,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 4,
+    "accumulation": 2,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 40,
+      "dense_matrices": 300,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 40,
+          "dense_matrices": 297,
+          "projection_groups": 16
+        },
+        "steps": 8
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 40,
+          "dense_matrices": 300,
+          "projection_groups": 16
+        },
+        "steps": 56
+      }
+    ]
+  },
+  "retain-b8": {
+    "mean_ms": 121.68229542187498,
+    "median_ms": 121.6839965,
+    "logical_gflops": 74.727358464,
+    "issued_gflops": 77.793492992,
+    "launches": 1401.0,
+    "peak_mib": 629,
+    "bpb": 7.934994267674378,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 9.339682842,
+    "source_blake3": "50c78cb48e6130c3915ed321bfb90907000f2cccf99c9a800801bdbd6d002c44",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 46.17938999307148,
+    "speedup_vs_baseline": 1.8580242770776223,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 8,
+    "accumulation": 1,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 44,
+      "dense_matrices": 126,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 44,
+          "dense_matrices": 126,
+          "projection_groups": 16
+        },
+        "steps": 64
+      }
+    ]
+  },
+  "combined-b4": {
+    "mean_ms": 118.45020990625001,
+    "median_ms": 118.802854,
+    "logical_gflops": 77.614874624,
+    "issued_gflops": 81.616699392,
+    "launches": 2626.625,
+    "peak_mib": 579,
+    "bpb": 7.934998410709565,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 8.403107743,
+    "source_blake3": "b399ed04fbbc5f70fc06212e9fc6c9a98f5d3c73a55caff29d8ef27554d11b55",
+    "executable_blake3": "15e05b0fcf5bd9af1bef5fbaf2e0cb84d18670aa5a6b3182be43acb2893440b7",
+    "reduction_vs_baseline_percent": 47.608955514024196,
+    "speedup_vs_baseline": 1.9087231602486625,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 4,
+    "accumulation": 2,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 40,
+      "dense_matrices": 300,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 40,
+          "dense_matrices": 297,
+          "projection_groups": 16
+        },
+        "steps": 8
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 40,
+          "dense_matrices": 300,
+          "projection_groups": 16
+        },
+        "steps": 56
+      }
+    ]
+  },
+  "combined-b8": {
+    "mean_ms": 114.08590176562501,
+    "median_ms": 114.0130135,
+    "logical_gflops": 74.727358464,
+    "issued_gflops": 77.792903168,
+    "launches": 1401.0,
+    "peak_mib": 629,
+    "bpb": 7.934923011684752,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 8.132509691,
+    "source_blake3": "b399ed04fbbc5f70fc06212e9fc6c9a98f5d3c73a55caff29d8ef27554d11b55",
+    "executable_blake3": "15e05b0fcf5bd9af1bef5fbaf2e0cb84d18670aa5a6b3182be43acb2893440b7",
+    "reduction_vs_baseline_percent": 49.53930804043137,
+    "speedup_vs_baseline": 1.9817405611505388,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 8,
+    "accumulation": 1,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 44,
+      "dense_matrices": 126,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 44,
+          "dense_matrices": 126,
+          "projection_groups": 16
+        },
+        "steps": 64
+      }
+    ]
+  },
+  "dot2-b8": {
+    "mean_ms": 111.49789515625,
+    "median_ms": 111.2311245,
+    "logical_gflops": 74.727358464,
+    "issued_gflops": 77.792903168,
+    "launches": 1401,
+    "peak_mib": 629,
+    "bpb": 7.934923011684752,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 64,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 8.00032242,
+    "source_blake3": "dee57100e351b6a6ccd50836bcbb71fae9d2b445ce036d423f0af93cd26e6e64",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 50.68399465186989,
+    "speedup_vs_baseline": 2.027739256131613,
+    "training_steps": 66,
+    "measurement_steps": 64,
+    "batch": 8,
+    "accumulation": 1,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 44,
+      "dense_matrices": 126,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 44,
+          "dense_matrices": 126,
+          "projection_groups": 16
+        },
+        "steps": 64
+      }
+    ]
+  },
+  "long-baseline": {
+    "mean_ms": 222.49913069921877,
+    "median_ms": 222.49484850000002,
+    "logical_gflops": 94.126014464,
+    "issued_gflops": 105.296420864,
+    "launches": 12624.533203125,
+    "peak_mib": 472,
+    "bpb": 6.7699662310323365,
+    "initial_bpb": 8.596439428181656,
+    "compile_free_steps": 512,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 116.486658086,
+    "source_blake3": "50c78cb48e6130c3915ed321bfb90907000f2cccf99c9a800801bdbd6d002c44",
+    "executable_blake3": "65ca169bc8812bac4a23c39e382931bc4db8eb83bfaa9d92780a3119b8a5911e",
+    "reduction_vs_baseline_percent": 0.0,
+    "speedup_vs_baseline": 1.0,
+    "training_steps": 520,
+    "measurement_steps": 512,
+    "batch": 1,
+    "accumulation": 8,
+    "vjp_first_measured_step": {
+      "basis_groups": 8,
+      "compressed_matrices": 160,
+      "dense_matrices": 1146,
+      "projection_groups": 64
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1065,
+          "projection_groups": 64
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1071,
+          "projection_groups": 64
+        },
+        "steps": 5
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1074,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1077,
+          "projection_groups": 64
+        },
+        "steps": 7
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1080,
+          "projection_groups": 64
+        },
+        "steps": 7
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1083,
+          "projection_groups": 64
+        },
+        "steps": 3
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1086,
+          "projection_groups": 64
+        },
+        "steps": 8
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1089,
+          "projection_groups": 64
+        },
+        "steps": 12
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1092,
+          "projection_groups": 64
+        },
+        "steps": 14
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1095,
+          "projection_groups": 64
+        },
+        "steps": 21
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1098,
+          "projection_groups": 64
+        },
+        "steps": 16
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1101,
+          "projection_groups": 64
+        },
+        "steps": 21
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1104,
+          "projection_groups": 64
+        },
+        "steps": 22
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1107,
+          "projection_groups": 64
+        },
+        "steps": 34
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1110,
+          "projection_groups": 64
+        },
+        "steps": 23
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1113,
+          "projection_groups": 64
+        },
+        "steps": 21
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1116,
+          "projection_groups": 64
+        },
+        "steps": 33
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1119,
+          "projection_groups": 64
+        },
+        "steps": 25
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1122,
+          "projection_groups": 64
+        },
+        "steps": 23
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1125,
+          "projection_groups": 64
+        },
+        "steps": 19
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1128,
+          "projection_groups": 64
+        },
+        "steps": 19
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1131,
+          "projection_groups": 64
+        },
+        "steps": 12
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1134,
+          "projection_groups": 64
+        },
+        "steps": 20
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1137,
+          "projection_groups": 64
+        },
+        "steps": 12
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1140,
+          "projection_groups": 64
+        },
+        "steps": 13
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1143,
+          "projection_groups": 64
+        },
+        "steps": 21
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1146,
+          "projection_groups": 64
+        },
+        "steps": 17
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1149,
+          "projection_groups": 64
+        },
+        "steps": 8
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1152,
+          "projection_groups": 64
+        },
+        "steps": 18
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1155,
+          "projection_groups": 64
+        },
+        "steps": 12
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1158,
+          "projection_groups": 64
+        },
+        "steps": 12
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1161,
+          "projection_groups": 64
+        },
+        "steps": 8
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1164,
+          "projection_groups": 64
+        },
+        "steps": 4
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1167,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1170,
+          "projection_groups": 64
+        },
+        "steps": 6
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1173,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1176,
+          "projection_groups": 64
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 8,
+          "compressed_matrices": 160,
+          "dense_matrices": 1179,
+          "projection_groups": 64
+        },
+        "steps": 1
+      }
+    ]
+  },
+  "long-combined-b8": {
+    "mean_ms": 114.03427931054686,
+    "median_ms": 114.05833700000001,
+    "logical_gflops": 74.675339264,
+    "issued_gflops": 77.720543232,
+    "launches": 1399.98828125,
+    "peak_mib": 632,
+    "bpb": 6.769951980405447,
+    "initial_bpb": 8.59639111424098,
+    "compile_free_steps": 512,
+    "bytes_per_step": 4096,
+    "complete_training_seconds": 60.032866978,
+    "source_blake3": "b399ed04fbbc5f70fc06212e9fc6c9a98f5d3c73a55caff29d8ef27554d11b55",
+    "executable_blake3": "15e05b0fcf5bd9af1bef5fbaf2e0cb84d18670aa5a6b3182be43acb2893440b7",
+    "reduction_vs_baseline_percent": 48.74843827380973,
+    "speedup_vs_baseline": 1.9511600550681092,
+    "training_steps": 520,
+    "measurement_steps": 512,
+    "batch": 8,
+    "accumulation": 1,
+    "vjp_first_measured_step": {
+      "basis_groups": 2,
+      "compressed_matrices": 44,
+      "dense_matrices": 126,
+      "projection_groups": 16
+    },
+    "vjp_step_distribution": [
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 44,
+          "dense_matrices": 123,
+          "projection_groups": 16
+        },
+        "steps": 11
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 44,
+          "dense_matrices": 126,
+          "projection_groups": 16
+        },
+        "steps": 412
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 46,
+          "dense_matrices": 121,
+          "projection_groups": 17
+        },
+        "steps": 7
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 46,
+          "dense_matrices": 124,
+          "projection_groups": 17
+        },
+        "steps": 71
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 48,
+          "dense_matrices": 116,
+          "projection_groups": 18
+        },
+        "steps": 1
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 48,
+          "dense_matrices": 119,
+          "projection_groups": 18
+        },
+        "steps": 2
+      },
+      {
+        "statistics": {
+          "basis_groups": 2,
+          "compressed_matrices": 48,
+          "dense_matrices": 122,
+          "projection_groups": 18
+        },
+        "steps": 8
+      }
+    ]
+  }
+}

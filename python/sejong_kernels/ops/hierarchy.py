@@ -40,7 +40,7 @@ def hierarchy_attention(Q, K, V, O, LSE, TQ, TK, OFFSET,
 
 
 @tr.jit
-def hierarchy_attention_dq(Q, K, V, O, LSE, DO, DQ, T,
+def hierarchy_attention_dq(Q, K, V, O, LSE, DO, DQ, Delta, T,
                            HQ: tl.constexpr, HK: tl.constexpr, D: tl.constexpr,
                            BD: tl.constexpr, BK: tl.constexpr, WINDOW: tl.constexpr):
     row = tl.program_id(0)
@@ -54,6 +54,7 @@ def hierarchy_attention_dq(Q, K, V, O, LSE, DO, DQ, T,
     dy = tl.load(DO + row * D + d, d < D, 0).to(tl.float32)
     output = tl.load(O + row * D + d, d < D, 0).to(tl.float32)
     delta = tl.sum(dy * output, 0)
+    tl.store(Delta + row, delta)
     lse = tl.load(LSE + row)
     result = tl.full((BD,), 0, tl.float32)
     first = tl.maximum(0, position + 1 - WINDOW) if WINDOW > 0 else 0
@@ -70,7 +71,7 @@ def hierarchy_attention_dq(Q, K, V, O, LSE, DO, DQ, T,
 
 
 @tr.jit
-def hierarchy_attention_dkv(Q, K, V, O, LSE, DO, DK, DV, T,
+def hierarchy_attention_dkv(Q, K, V, LSE, DO, Delta, DK, DV, T,
                             HQ: tl.constexpr, HK: tl.constexpr, D: tl.constexpr,
                             BD: tl.constexpr, BK: tl.constexpr, WINDOW: tl.constexpr):
     row = tl.program_id(0)
@@ -93,10 +94,9 @@ def hierarchy_attention_dkv(Q, K, V, O, LSE, DO, DK, DV, T,
             indices = query_row[:, None] * D + d[None, :]
             q = tl.load(Q + indices, valid[:, None] & (d[None, :] < D), 0).to(tl.float32)
             dy = tl.load(DO + indices, valid[:, None] & (d[None, :] < D), 0).to(tl.float32)
-            output = tl.load(O + indices, valid[:, None] & (d[None, :] < D), 0).to(tl.float32)
             lse = tl.load(LSE + query_row, valid, 0)
             probability = tl.where(valid, tl.exp(tl.sum(q * k[None, :], 1) * (D ** -0.5) - lse), 0)
-            delta = tl.sum(dy * output, 1)
+            delta = tl.load(Delta + query_row, valid, 0)
             ds = probability * (tl.sum(dy * v[None, :], 1) - delta) * (D ** -0.5)
             dk += tl.sum(q * ds[:, None], 0)
             dv += tl.sum(dy * probability[:, None], 0)
@@ -145,14 +145,31 @@ def hierarchy_patch_broadcast(X, BOS, Y, N, T, D, PATCH: tl.constexpr, BLOCK: tl
 
 @tr.jit
 def hierarchy_patch_broadcast_backward(DY, DX, DBOS, N, T, D, PATCH: tl.constexpr, BLOCK: tl.constexpr):
-    index = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
-    position = (index // D) % T
-    batch = index // (T * D)
-    patch = position // PATCH - 1
-    destination = (batch * tl.cdiv(T, PATCH) + tl.maximum(patch, 0)) * D + index % D
-    dy = tl.load(DY + index, index < N, 0).to(tl.float32)
-    tl.atomic_add(DX + destination, dy, (index < N) & (patch >= 0), sem="relaxed")
-    tl.atomic_add(DBOS + index % D, dy, (index < N) & (patch < 0), sem="relaxed")
+    tile = tl.program_id(0)
+    lane = tl.arange(0, BLOCK)
+    batches = N // (T * D)
+    patches = tl.cdiv(T, PATCH)
+    elements = batches * patches * D
+    body_tiles = tl.cdiv(elements, BLOCK)
+    total = tl.full((BLOCK,), 0, tl.float32)
+    if tile < body_tiles:
+        index = tile * BLOCK + lane
+        row = index // D
+        batch = row // patches
+        start = (row % patches + 1) * PATCH
+        for offset in range(PATCH):
+            position = start + offset
+            value = tl.load(DY + (batch * T + position) * D + index % D,
+                            (index < elements) & (position < T), 0).to(tl.float32)
+            total += value
+        tl.store(DX + index, total, index < elements)
+    else:
+        column = (tile - body_tiles) * BLOCK + lane
+        for batch_index in range(batches):
+            for bos_position in range(tl.minimum(PATCH, T)):
+                total += tl.load(DY + (batch_index * T + bos_position) * D + column,
+                                 column < D, 0).to(tl.float32)
+        tl.store(DBOS + column, total, column < D)
 
 
 @tr.jit

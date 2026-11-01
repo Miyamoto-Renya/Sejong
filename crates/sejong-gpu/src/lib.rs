@@ -2,15 +2,19 @@
 mod common_ops;
 mod counters;
 mod hierarchy_ops;
+mod norm_ops;
+mod projection_ops;
 pub use counters::ExecutionCounters;
 pub mod graph;
 mod hip;
+pub mod parameter_vjp;
 mod parser_ops;
 use hip::{Allocation, DeviceInner, Module};
 use sejong_core::{DType, Error, GpuConfig, Result, ensure, json};
 use std::{
     collections::HashMap,
     ffi::c_void,
+    hash::{Hash, Hasher},
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
@@ -126,12 +130,35 @@ impl Drop for Compiler {
     }
 }
 
+struct CachedKernel {
+    operation: String,
+    signature: Vec<(String, &'static str)>,
+    constants: json::Value,
+    module: std::result::Result<Module, (usize, usize)>,
+}
+impl CachedKernel {
+    fn matches(&self, operation: &str, args: &[(&str, Arg)], constants: &json::Value) -> bool {
+        self.operation == operation
+            && self.constants == *constants
+            && self.signature.len() == args.len()
+            && self
+                .signature
+                .iter()
+                .zip(args)
+                .all(|((name, kind), (arg_name, arg))| name == arg_name && *kind == arg.signature())
+    }
+}
+
 pub struct Engine {
     device: Rc<DeviceInner>,
     compiler: Compiler,
-    kernels: HashMap<String, Module>,
+    kernels: HashMap<u64, Vec<CachedKernel>>,
+    rms_plans: HashMap<(usize, usize), norm_ops::RmsPlan>,
+    metrics_enabled: bool,
     config: GpuConfig,
     counters: ExecutionCounters,
+    #[cfg(feature = "kernel-profile")]
+    kernel_timings: Option<Vec<(String, hip::EventPair)>>,
 }
 #[derive(Clone)]
 pub enum Arg {
@@ -140,7 +167,7 @@ pub enum Arg {
     F32(f32),
 }
 impl Arg {
-    fn signature(&self) -> &str {
+    fn signature(&self) -> &'static str {
         match self {
             Self::Ptr(t) => t.dtype.pointer(),
             Self::I32(_) => "i32",
@@ -177,7 +204,7 @@ impl Engine {
             let output=Command::new(root.join(".venv/bin/python")).args(["-c","import importlib.metadata as m; print(m.distribution('rocm-sdk-core').locate_file('_rocm_sdk_core/lib/libamdhip64.so.7'))"]).output()?;
             ensure(
                 output.status.success(),
-                format!(
+                format_args!(
                     "ROCm discovery: {}",
                     String::from_utf8_lossy(&output.stderr)
                 ),
@@ -196,8 +223,12 @@ impl Engine {
             device,
             compiler: Compiler::start(&root)?,
             kernels: HashMap::new(),
+            rms_plans: HashMap::new(),
+            metrics_enabled: false,
             config,
             counters: ExecutionCounters::default(),
+            #[cfg(feature = "kernel-profile")]
+            kernel_timings: std::env::var_os("SEJONG_PROFILE_KERNELS").map(|_| Vec::new()),
         })
     }
     pub fn allocation_bytes(bytes: usize) -> Result<usize> {
@@ -339,44 +370,68 @@ impl Engine {
         constants: json::Value,
         grid: [usize; 3],
     ) -> Result<()> {
-        ensure(
-            grid.iter().all(|v| *v > 0 && *v <= u32::MAX as usize),
-            "invalid kernel grid",
-        )?;
-        let signature: json::Map<String, json::Value> = args
-            .iter()
-            .map(|(name, arg)| {
-                (
-                    name.to_string(),
-                    json::Value::String(arg.signature().into()),
-                )
-            })
-            .collect();
-        let request = json::json!({"operation":operation,"signature":signature,"constants":constants,"architecture":self.config.architecture,"wavefront":self.config.wavefront,"warps":4});
-        let key = json::to_string(&request)?;
-        if !self.kernels.contains_key(&key) {
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+        operation.hash(&mut hash);
+        for (name, arg) in args {
+            name.hash(&mut hash);
+            arg.signature().hash(&mut hash);
+        }
+        constants.hash(&mut hash);
+        let key = hash.finish();
+        let slot = self.kernels.get(&key).and_then(|bucket| {
+            bucket
+                .iter()
+                .position(|kernel| kernel.matches(operation, args, &constants))
+        });
+        let slot = if let Some(slot) = slot {
+            slot
+        } else {
+            let signature: json::Map<String, json::Value> = args
+                .iter()
+                .map(|(name, arg)| ((*name).to_string(), json::json!(arg.signature())))
+                .collect();
+            let request = json::json!({"operation":operation,"signature":signature,"constants":constants,
+                "architecture":self.config.architecture,"wavefront":self.config.wavefront,"warps":4});
             let started = std::time::Instant::now();
             let r = self.compiler.compile(&request)?;
             self.counters.compile_seconds += started.elapsed().as_secs_f64();
-            if !r["cache_hit"].as_bool().unwrap_or(false) {
-                self.counters.compilations += 1;
+            self.counters.compilations += u64::from(!r["cache_hit"].as_bool().unwrap_or(false));
+            let shared = r["shared"].as_u64().unwrap() as usize;
+            let module = if shared > self.device.shared_memory_per_block {
+                Err((shared, self.device.shared_memory_per_block))
+            } else {
+                Ok(Module::load(
+                    self.device.clone(),
+                    Path::new(r["binary"].as_str().unwrap()),
+                    r["symbol"].as_str().unwrap(),
+                    shared as u32,
+                    r["threads"].as_u64().unwrap() as u32,
+                    r["global_scratch"].as_u64().unwrap() as usize,
+                    r["profile_scratch"].as_u64().unwrap() as usize,
+                )?)
+            };
+            let bucket = self.kernels.entry(key).or_default();
+            bucket.push(CachedKernel {
+                operation: operation.into(),
+                signature: args
+                    .iter()
+                    .map(|(name, arg)| ((*name).to_string(), arg.signature()))
+                    .collect(),
+                constants: constants.clone(),
+                module,
+            });
+            bucket.len() - 1
+        };
+        let kernel = match &self.kernels[&key][slot].module {
+            Ok(kernel) => kernel,
+            Err((required, available)) => {
+                return Err(Error::Capacity {
+                    operation: format!("{operation} shared memory"),
+                    required: *required,
+                    available: *available,
+                });
             }
-            let module = Module::load(
-                self.device.clone(),
-                Path::new(
-                    r["binary"]
-                        .as_str()
-                        .ok_or_else(|| Error::Message("missing kernel binary".into()))?,
-                ),
-                r["symbol"].as_str().unwrap(),
-                r["shared"].as_u64().unwrap() as u32,
-                r["threads"].as_u64().unwrap() as u32,
-                r["global_scratch"].as_u64().unwrap() as usize,
-                r["profile_scratch"].as_u64().unwrap() as usize,
-            )?;
-            self.kernels.insert(key.clone(), module);
-        }
-        let kernel = &self.kernels[&key];
+        };
         let programs = grid.iter().product::<usize>();
         let global = if kernel.global_scratch > 0 {
             Some(self.device.allocate(kernel.global_scratch * programs)?)
@@ -393,6 +448,12 @@ impl Engine {
         values.push(profile.as_ref().map_or(0, |v| v.pointer as u64));
         let mut pointers: Vec<*mut c_void> =
             values.iter_mut().map(|v| (v as *mut u64).cast()).collect();
+        #[cfg(feature = "kernel-profile")]
+        let timing = if self.kernel_timings.is_some() {
+            Some(hip::EventPair::start(self.device.clone())?)
+        } else {
+            None
+        };
         unsafe {
             self.device.hip.check(
                 (self.device.hip.launch)(
@@ -411,8 +472,74 @@ impl Engine {
                 operation,
             )?;
         }
-        self.count_execution(operation, args, &request["constants"]);
+        #[cfg(feature = "kernel-profile")]
+        if let Some(timing) = timing {
+            timing.end()?;
+            self.kernel_timings
+                .as_mut()
+                .unwrap()
+                .push((operation.to_string(), timing));
+        }
+        if self.metrics_enabled {
+            self.count_execution(operation, args, &constants);
+        }
         Ok(())
+    }
+    pub fn enable_execution_metrics(&mut self, enabled: bool) {
+        self.metrics_enabled = enabled;
+    }
+    pub fn metrics_enabled(&self) -> bool {
+        self.metrics_enabled
+    }
+    pub fn gradient_norm(&mut self, gradients: &[Option<Tensor>]) -> Result<f64> {
+        let mut metadata = Vec::new();
+        for gradient in gradients.iter().flatten() {
+            let pointer = gradient.pointer();
+            metadata.extend([
+                pointer as u32 as i32,
+                (pointer >> 32) as u32 as i32,
+                gradient.len() as i32,
+                match gradient.dtype {
+                    DType::F32 => 0,
+                    DType::F64 => 1,
+                    DType::F16 => 2,
+                    DType::I32 => 3,
+                },
+            ]);
+        }
+        let count = metadata.len() / 4;
+        if count == 0 {
+            return Ok(0.);
+        }
+        let meta = self.from_i32(&[metadata.len()], &metadata)?;
+        let output = self.empty(&[count], DType::F64)?;
+        self.launch(
+            "gradient_norm",
+            &[("Meta", p(&meta)), ("Output", p(&output))],
+            json::json!({"BLOCK":parameter_vjp::BM*parameter_vjp::BN}),
+            [count, 1, 1],
+        )?;
+        Ok(self.to_f64(&output)?.iter().sum::<f64>().sqrt())
+    }
+    pub fn loss_summary(
+        &mut self,
+        loss: &Tensor,
+        output: &Tensor,
+        slot: usize,
+        weight: f32,
+    ) -> Result<()> {
+        self.launch(
+            "loss_summary",
+            &[
+                ("X", p(loss)),
+                ("Y", p(output)),
+                ("N", n(loss.len())?),
+                ("SLOT", n(slot)?),
+                ("WEIGHT", Arg::F32(weight)),
+            ],
+            json::json!({"BLOCK":parameter_vjp::BM*parameter_vjp::BN}),
+            [1, 1, 1],
+        )
     }
     pub fn full(&mut self, shape: &[usize], dtype: DType, value: f32) -> Result<Tensor> {
         let y = self.empty(shape, dtype)?;
@@ -442,7 +569,6 @@ impl Engine {
         )
     }
     pub fn add(&mut self, x: &Tensor, z: &Tensor, alpha: f32, dtype: DType) -> Result<Tensor> {
-        ensure(x.shape == z.shape, "add shape mismatch")?;
         let y = self.empty(&x.shape, dtype)?;
         self.add_into(x, z, &y, alpha)?;
         Ok(y)
@@ -516,8 +642,8 @@ impl Engine {
                 ("N", n(nn)?),
                 ("K", n(k)?),
             ],
-            json::json!({"TA":ta,"TB":tb,"BM":16,"BN":32,"BK":32}),
-            [m.div_ceil(16), nn.div_ceil(32), 1],
+            json::json!({"TA":ta,"TB":tb,"BM":parameter_vjp::BM,"BN":parameter_vjp::BN,"BK":parameter_vjp::BK}),
+            [m.div_ceil(parameter_vjp::BM), nn.div_ceil(parameter_vjp::BN), 1],
         )?;
         Ok(c)
     }
@@ -570,30 +696,6 @@ impl Engine {
             [x.shape[0], 1, 1],
         )?;
         Ok(y)
-    }
-    pub fn norm_backward(
-        &mut self,
-        x: &Tensor,
-        w: &Tensor,
-        dy: &Tensor,
-        epsilon: f32,
-    ) -> Result<(Tensor, Tensor)> {
-        let d = x.shape[1];
-        let dx = self.empty(&x.shape, DType::F32)?;
-        let dw = self.full(&w.shape, DType::F32, 0.)?;
-        self.launch(
-            "rmsnorm_backward",
-            &[
-                ("X", p(x)),
-                ("W", p(w)),
-                ("DY", p(dy)),
-                ("DX", p(&dx)),
-                ("DW", p(&dw)),
-            ],
-            json::json!({"D":d,"EPS":epsilon,"BLOCK":d.next_power_of_two()}),
-            [x.shape[0], 1, 1],
-        )?;
-        Ok((dx, dw))
     }
     pub fn swiglu(&mut self, g: &Tensor, u: &Tensor) -> Result<Tensor> {
         ensure(g.shape == u.shape, "SwiGLU shape mismatch")?;

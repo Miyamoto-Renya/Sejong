@@ -59,7 +59,6 @@ fn people_from_laws(laws: &LocalLaws) -> Result<usize> {
 impl Operator {
     pub fn from_laws(laws: &LocalLaws) -> Result<Self> {
         let people = people_from_laws(laws)?;
-        let scene_none = people * people;
         let instruction_none = (people + 1) * (people + 1) - 1;
         let selectors = people + 3;
         let request_none = 2 * selectors;
@@ -72,6 +71,14 @@ impl Operator {
                 && resources::normalized(q),
             "normalized input-dependent local laws required",
         )?;
+        Self::from_model_laws(laws, people)
+    }
+    pub(super) fn from_model_laws(laws: &LocalLaws, people: usize) -> Result<Self> {
+        let scene_none = people * people;
+        let instruction_none = (people + 1) * (people + 1) - 1;
+        let selectors = people + 3;
+        let request_none = 2 * selectors;
+        let (s, i, q) = laws;
         let channels = 2 * people;
         let mut result = Self {
             people,

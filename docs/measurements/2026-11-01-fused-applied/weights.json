@@ -1,0 +1,6 @@
+{
+  "parameters": 26488192,
+  "max_abs_weight_difference": 1.4901161193847656e-08,
+  "different_elements": 17,
+  "condition": "same full model and 66-step training schedule"
+}

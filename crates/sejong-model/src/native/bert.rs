@@ -146,21 +146,42 @@ pub struct BertEncoder {
 impl BertEncoder {
     pub fn load_shared(e: &mut Engine, path: &Path) -> Result<Rc<Self>> {
         thread_local! {static SHARED:RefCell<BTreeMap<(usize,String),Weak<BertEncoder>>>=const {RefCell::new(BTreeMap::new())};}
-        let mut hash = blake3::Hasher::new();
-        for file in ["config.json", "tokenizer.json", "model.safetensors"] {
-            hash.update(file.as_bytes());
-            hash.update(&std::fs::read(path.join(file))?);
-        }
-        let key = (e.context_id(), hash.finalize().to_hex().to_string());
+        let key = (
+            e.context_id(),
+            format!("path:{}", path.canonicalize()?.display()),
+        );
         if let Some(encoder) = SHARED.with(|cache| cache.borrow().get(&key).and_then(Weak::upgrade))
         {
             return Ok(encoder);
+        }
+        let declared = if path.join("encoder.json").exists() {
+            Some(json::from_slice::<EncoderIdentity>(&std::fs::read(
+                path.join("encoder.json"),
+            )?)?)
+        } else {
+            None
+        };
+        if let Some(identity) = &declared {
+            let digest_key = (e.context_id(), format!("digest:{}", identity.digest));
+            if let Some(encoder) =
+                SHARED.with(|cache| cache.borrow().get(&digest_key).and_then(Weak::upgrade))
+            {
+                SHARED.with(|cache| cache.borrow_mut().insert(key, Rc::downgrade(&encoder)));
+                return Ok(encoder);
+            }
         }
         let encoder = Rc::new(Self::load(e, path)?);
         SHARED.with(|cache| {
             let mut cache = cache.borrow_mut();
             cache.retain(|_, value| value.strong_count() > 0);
             cache.insert(key, Rc::downgrade(&encoder));
+            cache.insert(
+                (
+                    e.context_id(),
+                    format!("digest:{}", encoder.identity.digest),
+                ),
+                Rc::downgrade(&encoder),
+            );
         });
         Ok(encoder)
     }
@@ -191,7 +212,7 @@ impl BertEncoder {
             }
             ensure(
                 t.dtype() == safetensors::Dtype::F32,
-                format!("MiniLM {name} requires F32"),
+                format_args!("MiniLM {name} requires F32"),
             )?;
             let values: Vec<_> = t
                 .data()
@@ -298,7 +319,7 @@ impl BertEncoder {
                 self.parameters
                     .iter()
                     .any(|p| p.name == name && p.value.shape == shape),
-                format!("MiniLM tensor contract differs: {name}"),
+                format_args!("MiniLM tensor contract differs: {name}"),
             )?;
         }
         Ok(())
@@ -445,7 +466,6 @@ impl BertEncoder {
         )
     }
     pub fn save(&self, e: &mut Engine, path: &Path) -> Result<()> {
-        self.verify(e)?;
         atomic_directory(path, |dir| {
             std::fs::write(dir.join("config.json"), json::to_vec_pretty(&self.config)?)?;
             std::fs::write(dir.join("tokenizer.json"), &self.tokenizer_json)?;

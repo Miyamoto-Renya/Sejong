@@ -1,0 +1,1619 @@
+{
+  "parameters": 26488192,
+  "different_elements": 28,
+  "max_abs_weight_difference": 7.450580596923828e-09,
+  "relative_l2": 5.5323566040837745e-11,
+  "nonfinite": 0,
+  "per_parameter": [
+    {
+      "parameter": "decoder.0.attention_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.attention_output",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.down",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.ffn_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.gate",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.key",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.query",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.up",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.0.value",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.attention_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.attention_output",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.down",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.ffn_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.gate",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.key",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.query",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.up",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder.1.value",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "decoder_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "embedding",
+      "elements": 32896,
+      "different": 28,
+      "max_abs": 7.450580596923828e-09,
+      "relative_l2": 7.845490510386264e-10,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.attention_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.attention_output",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.down",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.ffn_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.gate",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.key",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.query",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.up",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.0.value",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.attention_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.attention_output",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.down",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.ffn_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.gate",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.key",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.query",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.up",
+      "elements": 49152,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder.1.value",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder_norm",
+      "elements": 128,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder_to_decoder",
+      "elements": 16384,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "encoder_to_global",
+      "elements": 65536,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "final_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "global_bos",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "global_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "global_to_decoder",
+      "elements": 65536,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "input_projection",
+      "elements": 65536,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.0.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.1.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.2.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.3.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.4.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.5.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.6.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.attention_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.attention_output",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.0.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.0.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.0.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.1.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.1.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.1.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.2.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.2.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.2.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.3.down",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.3.gate",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.experts.3.up",
+      "elements": 196608,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.ffn_norm",
+      "elements": 512,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.key",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.query",
+      "elements": 262144,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.router",
+      "elements": 2048,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "layers.7.value",
+      "elements": 131072,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "output",
+      "elements": 131584,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "parameter": "output_projection",
+      "elements": 65536,
+      "different": 0,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "nonfinite": 0
+    }
+  ],
+  "reference": "runs/fit-combined-b8/run-000/model",
+  "candidate": "runs/fit-dot2-b8/run-000/model",
+  "step_equal": true,
+  "data_rng_equal": true,
+  "optimizer_tensors_equal": {
+    "sgd.basis_rng": true,
+    "sgd.parameter_rng": true,
+    "sgd.sampling_rng": true,
+    "sgd.version": true
+  }
+}

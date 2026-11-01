@@ -1,0 +1,69 @@
+{
+  "model": {
+    "id": "sejong",
+    "width": 512,
+    "layers": 8,
+    "heads": 8,
+    "ffn_width": 1536,
+    "context": 2048,
+    "rope_theta": 10000.0,
+    "norm_epsilon": 1.1920929e-7,
+    "precision": "f16",
+    "seed": 42,
+    "hierarchy": {
+      "patch_size": 8,
+      "encoder_width": 128,
+      "encoder_layers": 2,
+      "encoder_heads": 2,
+      "encoder_ffn_width": 384,
+      "decoder_width": 128,
+      "decoder_layers": 2,
+      "decoder_heads": 2,
+      "decoder_ffn_width": 384,
+      "local_window": 128,
+      "checkpoint_encoder": false,
+      "checkpoint_decoder": false
+    },
+    "kv_heads": 4,
+    "experts": {
+      "count": 4,
+      "top_k": 2,
+      "ffn_width": 384
+    }
+  },
+  "training": {
+    "optimizer": "sgd",
+    "control_variate": null,
+    "parameter_vjp": {
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "block_rows": 32,
+      "seed": 124
+    },
+    "gradient_diagnostics_every": 0,
+    "activation_checkpointing": true,
+    "steps": 3,
+    "sequence": 512,
+    "batch": 1,
+    "accumulation": 8,
+    "learning_rate": 0.0003,
+    "min_learning_rate": 0.00003,
+    "warmup_steps": 100,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "epsilon": 0.0,
+    "weight_decay": 0.0,
+    "clip_norm": 1.0,
+    "clip_enabled": false,
+    "loss_scale": 1.0,
+    "checkpoint_every": 0,
+    "log_every": 1,
+    "seed": 123
+  },
+  "gpu": {
+    "device": 0,
+    "architecture": "gfx1032",
+    "wavefront": 32,
+    "memory_mb": 0
+  }
+}

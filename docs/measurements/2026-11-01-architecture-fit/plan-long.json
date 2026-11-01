@@ -1,0 +1,24 @@
+[
+  {
+    "name": "long-baseline",
+    "batch": 1,
+    "config": ".cache/fit-research/baseline.toml",
+    "executable": "target/release/sejong",
+    "env": {},
+    "warmup_steps": 8,
+    "measure_steps": 512
+  },
+  {
+    "name": "long-combined-b8",
+    "batch": 8,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain-b8.toml",
+    "executable": "/home/renya/Sejong/.cache/fit-research/mirror-root/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/combined-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/combined-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    },
+    "warmup_steps": 8,
+    "measure_steps": 512
+  }
+]

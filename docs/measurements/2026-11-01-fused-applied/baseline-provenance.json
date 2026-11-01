@@ -1,0 +1,5 @@
+{
+  "binary_sha256": "5bd209260becd0383f95490ad292c43ada1515072e9dde93053670f62c1a6c03",
+  "python_root": "/home/renya/Sejong/.cache/fused-integration/before-root",
+  "baseline_snapshot": "docs/measurements/2026-11-01-fused-execution/attention-rms/baseline_kernels.py"
+}

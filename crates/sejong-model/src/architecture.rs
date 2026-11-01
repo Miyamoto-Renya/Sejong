@@ -173,9 +173,13 @@ struct Ffn {
 }
 impl Ffn {
     fn apply(&self, g: &mut Graph, v: &[Var], x: Var) -> Result<Var> {
-        let gate = self.gate.apply(g, v, x)?;
-        let up = self.up.apply(g, v, x)?;
-        let active = g.swiglu(gate, up)?;
+        let active = if self.gate.correction.is_none() && self.up.correction.is_none() {
+            g.gate_up(x, v[self.gate.slot], v[self.up.slot])?
+        } else {
+            let gate = self.gate.apply(g, v, x)?;
+            let up = self.up.apply(g, v, x)?;
+            g.swiglu(gate, up)?
+        };
         self.down.apply(g, v, active)
     }
 }
@@ -196,9 +200,18 @@ struct Block {
 impl Block {
     fn apply(&self, g: &mut Graph, v: &[Var]) -> Result<Var> {
         let z = g.norm(v[0], v[self.attention_norm], self.epsilon)?;
-        let q = self.query.apply(g, v, z)?;
-        let k = self.key.apply(g, v, z)?;
-        let value = self.value.apply(g, v, z)?;
+        let (q, k, value) = if self.query.correction.is_none()
+            && self.key.correction.is_none()
+            && self.value.correction.is_none()
+        {
+            g.project_qkv(z, v[self.query.slot], v[self.key.slot], v[self.value.slot])?
+        } else {
+            (
+                self.query.apply(g, v, z)?,
+                self.key.apply(g, v, z)?,
+                self.value.apply(g, v, z)?,
+            )
+        };
         let q = g.rope(q, self.sequence, 0, self.stage.heads, self.theta)?;
         let k = g.rope(k, self.sequence, 0, self.stage.kv_heads, self.theta)?;
         let a = g.attention_grouped(
@@ -445,9 +458,11 @@ fn cached_ffn(
     x: &Tensor,
     dtype: DType,
 ) -> Result<Tensor> {
-    let gate = engine.matmul(x, &weights[&format!("{prefix}.gate")], false, false, dtype)?;
-    let up = engine.matmul(x, &weights[&format!("{prefix}.up")], false, false, dtype)?;
-    let active = engine.swiglu(&gate, &up)?;
+    let (_, _, active) = engine.gate_up(
+        x,
+        &weights[&format!("{prefix}.gate")],
+        &weights[&format!("{prefix}.up")],
+    )?;
     engine.matmul(
         &active,
         &weights[&format!("{prefix}.down")],
@@ -471,9 +486,7 @@ fn cached_blocks(
         let prefix = format!("{}.{layer}", stage.prefix);
         let w = |name: &str| &weights[&format!("{prefix}.{name}")];
         let z = engine.norm(&x, w("attention_norm"), c.norm_epsilon)?;
-        let q = engine.matmul(&z, w("query"), false, false, c.precision)?;
-        let k = engine.matmul(&z, w("key"), false, false, c.precision)?;
-        let v = engine.matmul(&z, w("value"), false, false, c.precision)?;
+        let (q, k, v) = engine.project_qkv(&z, w("query"), w("key"), w("value"))?;
         let q = engine.rope(&q, rows, offset, stage.heads, c.rope_theta, false)?;
         let k = engine.rope(&k, rows, offset, stage.kv_heads, c.rope_theta, false)?;
         engine.copy_into(&k, &keys[layer].rows(offset, rows)?)?;

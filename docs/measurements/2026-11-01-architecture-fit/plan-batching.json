@@ -1,0 +1,31 @@
+[
+  {
+    "name": "retain-b8",
+    "batch": 8,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain-b8.toml",
+    "executable": "/home/renya/Sejong/target/release/sejong",
+    "env": {}
+  },
+  {
+    "name": "combined-b4",
+    "batch": 4,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain-b4.toml",
+    "executable": "/home/renya/Sejong/.cache/fit-research/mirror-root/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/combined-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/combined-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  },
+  {
+    "name": "combined-b8",
+    "batch": 8,
+    "config": "/home/renya/Sejong/.cache/fit-research/retain-b8.toml",
+    "executable": "/home/renya/Sejong/.cache/fit-research/mirror-root/target/release/sejong",
+    "env": {
+      "SEJONG_ROOT": "/home/renya/Sejong/.cache/fit-research/combined-root",
+      "PYTHONPATH": "/home/renya/Sejong/.cache/fit-research/combined-root/python",
+      "SEJONG_PYTHON": "/home/renya/Sejong/.venv/bin/python"
+    }
+  }
+]

@@ -1,0 +1,93 @@
+--- a/python/sejong_kernels/ops/kernels.py
++++ b/python/sejong_kernels/ops/kernels.py
+@@ -26,14 +26,15 @@
+     n=tl.program_id(1)*BN+tl.arange(0,BN)
+     k=tl.arange(0,BK)
+     accum=tl.full((BM,BN),0,tl.float32)
++    dtype:tl.constexpr=tl.float16 if A.dtype.element_ty==tl.float16 and B.dtype.element_ty==tl.float16 else tl.float32
+     for start in range(tl.cdiv(K,BK)):
+         kk=start*BK+k
+         if TA: ap=kk[None,:]*M+m[:,None]
+         else: ap=m[:,None]*K+kk[None,:]
+         if TB: bp=n[None,:]*K+kk[:,None]
+         else: bp=kk[:,None]*N+n[None,:]
+-        a=tl.load(A+ap,(m[:,None]<M)&(kk[None,:]<K),0).to(tl.float32)
+-        b=tl.load(B+bp,(kk[:,None]<K)&(n[None,:]<N),0).to(tl.float32)
++        a=tl.load(A+ap,(m[:,None]<M)&(kk[None,:]<K),0).to(dtype)
++        b=tl.load(B+bp,(kk[:,None]<K)&(n[None,:]<N),0).to(dtype)
+         accum+=tl.dot(a,b,input_precision="ieee")
+     tl.store(C+m[:,None]*N+n[None,:],accum,(m[:,None]<M)&(n[None,:]<N))
+ 
+--- a/python/sejong_kernels/ops/projection.py
++++ b/python/sejong_kernels/ops/projection.py
+@@ -10,22 +10,25 @@
+     n = tl.program_id(1) * BN + tl.arange(0, BN)
+     k = tl.arange(0, BK)
+     aq = tl.full((BM, BN), 0, tl.float32)
++    qdtype: tl.constexpr = tl.float16 if X.dtype.element_ty == tl.float16 and WQ.dtype.element_ty == tl.float16 else tl.float32
++    kdtype: tl.constexpr = tl.float16 if X.dtype.element_ty == tl.float16 and WK.dtype.element_ty == tl.float16 else tl.float32
++    vdtype: tl.constexpr = tl.float16 if X.dtype.element_ty == tl.float16 and WV.dtype.element_ty == tl.float16 else tl.float32
+     if tl.program_id(1) * BN < KV:
+         ak = tl.full((BM, BN), 0, tl.float32)
+         av = tl.full((BM, BN), 0, tl.float32)
+         for start in range(tl.cdiv(K, BK)):
+             kk = start * BK + k
+             x = tl.load(X + m[:, None] * K + kk[None, :],
+-                        (m[:, None] < M) & (kk[None, :] < K), 0).to(tl.float32)
++                        (m[:, None] < M) & (kk[None, :] < K), 0)
+             wq = tl.load(WQ + kk[:, None] * N + n[None, :],
+-                         (kk[:, None] < K) & (n[None, :] < N), 0).to(tl.float32)
++                         (kk[:, None] < K) & (n[None, :] < N), 0)
+             wk = tl.load(WK + kk[:, None] * KV + n[None, :],
+-                         (kk[:, None] < K) & (n[None, :] < KV), 0).to(tl.float32)
++                         (kk[:, None] < K) & (n[None, :] < KV), 0)
+             wv = tl.load(WV + kk[:, None] * KV + n[None, :],
+-                         (kk[:, None] < K) & (n[None, :] < KV), 0).to(tl.float32)
+-            aq += tl.dot(x, wq, input_precision="ieee")
+-            ak += tl.dot(x, wk, input_precision="ieee")
+-            av += tl.dot(x, wv, input_precision="ieee")
++                         (kk[:, None] < K) & (n[None, :] < KV), 0)
++            aq += tl.dot(x.to(qdtype), wq.to(qdtype), input_precision="ieee")
++            ak += tl.dot(x.to(kdtype), wk.to(kdtype), input_precision="ieee")
++            av += tl.dot(x.to(vdtype), wv.to(vdtype), input_precision="ieee")
+         mask = (m[:, None] < M) & (n[None, :] < KV)
+         tl.store(KOUT + m[:, None] * KV + n[None, :], ak, mask)
+         tl.store(VOUT + m[:, None] * KV + n[None, :], av, mask)
+@@ -33,10 +36,10 @@
+         for start in range(tl.cdiv(K, BK)):
+             kk = start * BK + k
+             x = tl.load(X + m[:, None] * K + kk[None, :],
+-                        (m[:, None] < M) & (kk[None, :] < K), 0).to(tl.float32)
++                        (m[:, None] < M) & (kk[None, :] < K), 0)
+             wq = tl.load(WQ + kk[:, None] * N + n[None, :],
+-                         (kk[:, None] < K) & (n[None, :] < N), 0).to(tl.float32)
+-            aq += tl.dot(x, wq, input_precision="ieee")
++                         (kk[:, None] < K) & (n[None, :] < N), 0)
++            aq += tl.dot(x.to(qdtype), wq.to(qdtype), input_precision="ieee")
+     tl.store(Q + m[:, None] * N + n[None, :], aq,
+              (m[:, None] < M) & (n[None, :] < N))
+ 
+@@ -49,16 +52,18 @@
+     k = tl.arange(0, BK)
+     ag = tl.full((BM, BN), 0, tl.float32)
+     au = tl.full((BM, BN), 0, tl.float32)
++    gdtype: tl.constexpr = tl.float16 if X.dtype.element_ty == tl.float16 and WG.dtype.element_ty == tl.float16 else tl.float32
++    udtype: tl.constexpr = tl.float16 if X.dtype.element_ty == tl.float16 and WU.dtype.element_ty == tl.float16 else tl.float32
+     for start in range(tl.cdiv(K, BK)):
+         kk = start * BK + k
+         x = tl.load(X + m[:, None] * K + kk[None, :],
+-                    (m[:, None] < M) & (kk[None, :] < K), 0).to(tl.float32)
++                    (m[:, None] < M) & (kk[None, :] < K), 0)
+         wg = tl.load(WG + kk[:, None] * N + n[None, :],
+-                     (kk[:, None] < K) & (n[None, :] < N), 0).to(tl.float32)
++                     (kk[:, None] < K) & (n[None, :] < N), 0)
+         wu = tl.load(WU + kk[:, None] * N + n[None, :],
+-                     (kk[:, None] < K) & (n[None, :] < N), 0).to(tl.float32)
+-        ag += tl.dot(x, wg, input_precision="ieee")
+-        au += tl.dot(x, wu, input_precision="ieee")
++                     (kk[:, None] < K) & (n[None, :] < N), 0)
++        ag += tl.dot(x.to(gdtype), wg.to(gdtype), input_precision="ieee")
++        au += tl.dot(x.to(udtype), wu.to(udtype), input_precision="ieee")
+     g = ag.to(G.dtype.element_ty).to(tl.float32)
+     u = au.to(U.dtype.element_ty).to(tl.float32)
+     offset = m[:, None] * N + n[None, :]

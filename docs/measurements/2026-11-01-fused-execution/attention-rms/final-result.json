@@ -1,0 +1,321 @@
+{
+  "rmsnorm": [
+    {
+      "rows": 512,
+      "width": 512,
+      "timing": {
+        "atomic": {
+          "median_us": 144.74330842494965,
+          "minimum_us": 143.97799968719482,
+          "enqueue_median_us": 3.8624843767820494,
+          "samples": [
+            {
+              "event_us": 145.69959044456482,
+              "enqueue_us": 3.724609385358235
+            },
+            {
+              "event_us": 144.9761539697647,
+              "enqueue_us": 3.8855625064115884
+            },
+            {
+              "event_us": 144.95112001895905,
+              "enqueue_us": 3.78024219571671
+            },
+            {
+              "event_us": 144.64862644672394,
+              "enqueue_us": 3.8276718754559624
+            },
+            {
+              "event_us": 143.97799968719482,
+              "enqueue_us": 3.8860703170939814
+            },
+            {
+              "event_us": 144.40704882144928,
+              "enqueue_us": 4.151367178906185
+            },
+            {
+              "event_us": 144.83799040317535,
+              "enqueue_us": 3.8394062471525103
+            },
+            {
+              "event_us": 144.43300664424896,
+              "enqueue_us": 3.951945302560489
+            }
+          ]
+        },
+        "partial_rows_4": {
+          "median_us": 12.426347471773624,
+          "minimum_us": 11.507906019687653,
+          "enqueue_median_us": 3.8036835974253336,
+          "samples": [
+            {
+              "event_us": 12.780101969838142,
+              "enqueue_us": 4.0633515538957
+            },
+            {
+              "event_us": 11.515718884766102,
+              "enqueue_us": 3.7286171874484353
+            },
+            {
+              "event_us": 12.867281213402748,
+              "enqueue_us": 3.794968748138672
+            },
+            {
+              "event_us": 11.507906019687653,
+              "enqueue_us": 3.81369531510245
+            },
+            {
+              "event_us": 12.82072626054287,
+              "enqueue_us": 3.7896718794172557
+            },
+            {
+              "event_us": 12.162281200289726,
+              "enqueue_us": 3.860406252442772
+            },
+            {
+              "event_us": 12.690413743257523,
+              "enqueue_us": 3.7188437431723287
+            },
+            {
+              "event_us": 11.54258567839861,
+              "enqueue_us": 3.8123984467119953
+            }
+          ]
+        },
+        "partial_rows_8": {
+          "median_us": 11.299929581582546,
+          "minimum_us": 11.196648702025414,
+          "enqueue_median_us": 3.8291328010586767,
+          "samples": [
+            {
+              "event_us": 11.206336319446564,
+              "enqueue_us": 3.803296863225114
+            },
+            {
+              "event_us": 11.2113356590271,
+              "enqueue_us": 3.790179675888794
+            },
+            {
+              "event_us": 11.352273635566235,
+              "enqueue_us": 3.8881328094930723
+            },
+            {
+              "event_us": 11.463523842394352,
+              "enqueue_us": 3.98885156016604
+            },
+            {
+              "event_us": 11.706343851983547,
+              "enqueue_us": 3.8911718860390465
+            },
+            {
+              "event_us": 11.404461227357388,
+              "enqueue_us": 3.7769296881151604
+            },
+            {
+              "event_us": 11.247585527598858,
+              "enqueue_us": 3.7787109334885827
+            },
+            {
+              "event_us": 11.196648702025414,
+              "enqueue_us": 3.8549687388922393
+            }
+          ]
+        },
+        "partial_rows_16": {
+          "median_us": 11.743218638002872,
+          "minimum_us": 11.657905764877796,
+          "enqueue_median_us": 3.835089842141315,
+          "samples": [
+            {
+              "event_us": 11.733531020581722,
+              "enqueue_us": 3.7839375011117227
+            },
+            {
+              "event_us": 11.657905764877796,
+              "enqueue_us": 3.7783828190640634
+            },
+            {
+              "event_us": 11.752906255424023,
+              "enqueue_us": 3.800000001774606
+            },
+            {
+              "event_us": 11.807593517005444,
+              "enqueue_us": 4.017328123495645
+            },
+            {
+              "event_us": 12.026343494653702,
+              "enqueue_us": 3.724617187117474
+            },
+            {
+              "event_us": 11.879781261086464,
+              "enqueue_us": 3.918328118857062
+            },
+            {
+              "event_us": 11.696969158947468,
+              "enqueue_us": 3.8701796825080237
+            },
+            {
+              "event_us": 11.70259341597557,
+              "enqueue_us": 3.8787421914321385
+            }
+          ]
+        }
+      },
+      "scratch": {
+        "partial_rows_4": {
+          "partial_bytes": 262144,
+          "groups": 128
+        },
+        "partial_rows_8": {
+          "partial_bytes": 131072,
+          "groups": 64
+        },
+        "partial_rows_16": {
+          "partial_bytes": 65536,
+          "groups": 32
+        }
+      },
+      "error": {
+        "atomic": {
+          "dx_vs_fp64": {
+            "max_abs": 8.897091765547316e-07,
+            "relative_l2": 5.513535511895501e-08
+          },
+          "dw_vs_fp64": {
+            "max_abs": 3.7693640692282315e-05,
+            "relative_l2": 4.349560087964455e-07
+          },
+          "dx_vs_atomic": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0
+          },
+          "dw_vs_atomic": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0
+          }
+        },
+        "partial_rows_4": {
+          "dx_vs_fp64": {
+            "max_abs": 8.897091765547316e-07,
+            "relative_l2": 5.513535511895501e-08
+          },
+          "dw_vs_fp64": {
+            "max_abs": 3.793774215665735e-06,
+            "relative_l2": 9.148429047333798e-08
+          },
+          "dx_vs_atomic": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0
+          },
+          "dw_vs_atomic": {
+            "max_abs": 3.814697265625e-05,
+            "relative_l2": 4.3691893250547164e-07
+          }
+        },
+        "partial_rows_8": {
+          "dx_vs_fp64": {
+            "max_abs": 8.897091765547316e-07,
+            "relative_l2": 5.513535511895501e-08
+          },
+          "dw_vs_fp64": {
+            "max_abs": 4.000126569536633e-06,
+            "relative_l2": 9.168771582987966e-08
+          },
+          "dx_vs_atomic": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0
+          },
+          "dw_vs_atomic": {
+            "max_abs": 3.814697265625e-05,
+            "relative_l2": 4.403284722001002e-07
+          }
+        },
+        "partial_rows_16": {
+          "dx_vs_fp64": {
+            "max_abs": 8.897091765547316e-07,
+            "relative_l2": 5.513535511895501e-08
+          },
+          "dw_vs_fp64": {
+            "max_abs": 3.971836747496127e-06,
+            "relative_l2": 9.32220654910066e-08
+          },
+          "dx_vs_atomic": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0
+          },
+          "dw_vs_atomic": {
+            "max_abs": 3.814697265625e-05,
+            "relative_l2": 4.4350370356565586e-07
+          }
+        }
+      }
+    }
+  ],
+  "attention": [],
+  "started_utc": "2026-11-01T13:12:03Z",
+  "finished_utc": "2026-11-01T13:12:04Z",
+  "target": "gfx1032",
+  "wave_size": 32,
+  "warps": 4,
+  "seed": 20261101,
+  "compiled": [
+    {
+      "key": "fill",
+      "shared_bytes": 0,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "0828a2abb07866cd863b372851263ab1262a21ee28c26282ba8d6c888208795b"
+    },
+    {
+      "key": "rms-base-512",
+      "shared_bytes": 16,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "a1809b56456852e878a5017f3745a8759975579782d8801967f702d6920c5dd8"
+    },
+    {
+      "key": "rms-part-512-4",
+      "shared_bytes": 64,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "7da4754e047e95b3fdc987e490081ec37bfbcf8a6f3e4bb31d5b3a76987f127c"
+    },
+    {
+      "key": "rms-final-512-512-4",
+      "shared_bytes": 512,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "ab16507ec2bdc45673f6c92d60ddea09c9c05f0178452d03f0d5d553348992e5"
+    },
+    {
+      "key": "rms-part-512-8",
+      "shared_bytes": 128,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "e69afa6b1cb7ab8f0671fda895dc77e553172149684a097f18c9254f95faf9d5"
+    },
+    {
+      "key": "rms-final-512-512-8",
+      "shared_bytes": 512,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "64fb526828b32c6ab4a78b30f579d36917ac28c11317ef24693720e119b28bff"
+    },
+    {
+      "key": "rms-part-512-16",
+      "shared_bytes": 128,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "e07803bd7f6aaebf7ca414ac3f93aa455d2e70495de503995a50002a5f3915a2"
+    },
+    {
+      "key": "rms-final-512-512-16",
+      "shared_bytes": 512,
+      "threads": 128,
+      "global_scratch": 0,
+      "binary_sha256": "53291d36e29e099647308162f82de01ffc39910b5873606632984e526a8cda12"
+    }
+  ],
+  "protocol": "Dedicated GPU; HIP events bracket batches of kernel pairs; allocation/compilation/copies outside timing; each variant forward then reverse per round. Event times include idle host submission gaps. RMS baseline includes required DW fill; partial uses partial plus final. Attention compares existing dQ+dKV versus dQ stores Delta then dKV reads Delta.",
+  "probe_sha256": "36959572c8a7b2eeed29a92a3fb6dba8c00d818653070a01cfa67097cd9622ce"
+}

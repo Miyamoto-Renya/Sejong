@@ -1,0 +1,18 @@
+{
+  "changed_files": [
+    "crates/sejong-gpu/src/graph.rs",
+    "crates/sejong-model/src/lib.rs",
+    "crates/sejong-train/src/control_variate.rs"
+  ],
+  "patch_path": "/home/renya/Sejong/.cache/fit-research/mirror.patch",
+  "files": {
+    "crates/sejong-gpu/src/graph.rs": "588f5386e39c3890df5efe30b8d34305d9862895b9ab83e2f3a2a062e1e6fea1",
+    "crates/sejong-model/src/lib.rs": "e3965c964fcbcb3f97cc98f5bdd0792c202af2a7bffe405a2b35c91311c48014",
+    "crates/sejong-train/src/control_variate.rs": "e35f9b329036a802cc355a67dcc4fa945114e5f084896f04e4c6635eb4a8b33b"
+  },
+  "kernel_changes": false,
+  "mirror_values_per_step": 200,
+  "baseline_cast_launches_per_step": 1600,
+  "candidate_cast_launches_per_step": 200,
+  "candidate_removed_cast_launches_per_step": 1400
+}

@@ -23,11 +23,11 @@ pub enum Error {
     Toml(#[from] toml::de::Error),
 }
 pub type Result<T> = std::result::Result<T, Error>;
-pub fn ensure(condition: bool, message: impl Into<String>) -> Result<()> {
+pub fn ensure(condition: bool, message: impl std::fmt::Display) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(Error::Message(message.into()))
+        Err(Error::Message(message.to_string()))
     }
 }
 
@@ -310,6 +310,8 @@ pub const EOS: i32 = 256;
 pub struct TrainConfig {
     pub optimizer: OptimizerKind,
     pub control_variate: Option<ControlVariateConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameter_vjp: Option<ParameterVjpConfig>,
     pub gradient_diagnostics_every: usize,
     pub activation_checkpointing: bool,
     pub steps: usize,
@@ -335,6 +337,7 @@ impl Default for TrainConfig {
         Self {
             optimizer: OptimizerKind::Adamw,
             control_variate: None,
+            parameter_vjp: None,
             gradient_diagnostics_every: 0,
             activation_checkpointing: true,
             steps: 10000,
@@ -368,6 +371,13 @@ impl TrainConfig {
             "training requires positive steps/batch/accumulation and sequence within context",
         )?;
         ensure(self.log_every > 0, "log_every must be positive")?;
+        if let Some(policy) = &self.parameter_vjp {
+            ensure(
+                self.optimizer == OptimizerKind::Sgd,
+                "parameter_vjp uses the compact SGD optimizer",
+            )?;
+            policy.validate()?;
+        }
         if self.optimizer == OptimizerKind::ControlVariateSgd {
             if let Some(hierarchy) = &model.hierarchy {
                 ensure(
@@ -402,6 +412,7 @@ impl TrainConfig {
                 && self.epsilon >= 0.0
                 && self.loss_scale.is_finite()
                 && self.loss_scale > 0.0
+                && self.loss_scale.recip().is_finite()
                 && (!self.clip_enabled || (self.clip_norm.is_finite() && self.clip_norm > 0.0))
                 && self.weight_decay.is_finite()
                 && self.weight_decay >= 0.0,
@@ -428,6 +439,30 @@ pub enum OptimizerKind {
     Adamw,
     Sgd,
     ControlVariateSgd,
+}
+
+/// 현재 순전파의 token 기저와 정확한 feature 잔차 표집의 실행 예산.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ParameterVjpConfig {
+    pub rank: usize,
+    pub residual_fraction: f64,
+    pub block_rows: usize,
+    pub seed: u64,
+}
+impl ParameterVjpConfig {
+    pub fn validate(&self) -> Result<()> {
+        ensure(
+            self.rank > 0
+                && self.rank <= i32::MAX as usize
+                && self.block_rows > 0
+                && self.block_rows <= i32::MAX as usize
+                && self.residual_fraction.is_finite()
+                && self.residual_fraction > 0.
+                && self.residual_fraction <= 1.,
+            "parameter VJP requires positive rank/block_rows and residual_fraction in (0,1]",
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -525,7 +560,7 @@ impl Manifest {
         let m: Self = json::from_slice(&std::fs::read(directory.join("manifest.json"))?)?;
         ensure(
             m.format == 1,
-            format!("unsupported artifact format {}", m.format),
+            format_args!("unsupported artifact format {}", m.format),
         )?;
         m.model.validate()?;
         for filename in std::iter::once(&m.weights).chain(m.optimizer.iter()) {

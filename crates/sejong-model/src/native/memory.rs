@@ -263,6 +263,9 @@ impl Memory {
         g.add(logits, bias)
     }
     pub fn body_signature(&self, e: &mut Engine) -> Result<String> {
+        if self.seal.is_some() {
+            return Ok(self.metadata.body_signature.clone());
+        }
         let params = self
             .parameters
             .iter()
@@ -309,7 +312,7 @@ impl Memory {
         Ok(())
     }
     pub fn row(&self, e: &mut Engine, index: usize, mode: ReadMode) -> Result<(Vec<f64>, f64)> {
-        self.verify(e)?;
+        self.sealed_signature()?;
         let (law, _) = self.forward_row(e, index, mode, false)?;
         Ok((
             law,
@@ -365,6 +368,7 @@ impl Memory {
     }
     pub fn calibrate(&mut self, e: &mut Engine) -> Result<()> {
         self.verify(e)?;
+        self.seal = None;
         self.calibrate_internal(e)?;
         self.seal = Some(self.signature(e)?);
         Ok(())
@@ -407,11 +411,9 @@ impl Memory {
         Ok(())
     }
     pub fn verify(&self, e: &mut Engine) -> Result<()> {
-        let seal = self.seal.as_ref().ok_or_else(|| {
-            sejong_core::Error::Message("memory requires a sealed prepared snapshot".into())
-        })?;
+        let seal = self.sealed_signature()?;
         ensure(
-            self.signature(e)? == *seal,
+            self.compute_signature(e)? == seal,
             "memory changed after calibration; prepare a local revision",
         )
     }
@@ -453,41 +455,44 @@ impl Memory {
     }
     pub fn fork_revision(&self, e: &mut Engine) -> Result<(Self, RevisionGuard)> {
         self.verify(e)?;
+        let guard = self.revision_guard(e)?;
         let mut parameters = vec![];
         for p in &self.parameters {
-            let data = e.to_f64(&p.value)?;
+            let value = e.empty(&p.value.shape, p.value.dtype)?;
+            e.copy_into(&p.value, &value)?;
             parameters.push(Parameter {
                 name: p.name.clone(),
-                value: e.from_f64(&p.value.shape, &data)?,
+                value,
             });
         }
         let port = if let Some(p) = &self.port {
-            {
-                let data = e.to_f64(p)?;
-                Some(e.from_f64(&p.shape, &data)?)
-            }
+            let value = e.empty(&p.shape, p.dtype)?;
+            e.copy_into(p, &value)?;
+            Some(value)
         } else {
             None
         };
-        let mut copy = Self {
+        let copy = Self {
             parameters,
             metadata: self.metadata.clone(),
             port,
-            seal: self.seal.clone(),
+            seal: None,
         };
-        let guard = copy.begin_revision(e)?;
         Ok((copy, guard))
     }
     pub fn begin_revision(&mut self, e: &mut Engine) -> Result<RevisionGuard> {
         self.verify(e)?;
-        let guard = RevisionGuard {
+        let guard = self.revision_guard(e)?;
+        self.seal = None;
+        Ok(guard)
+    }
+    fn revision_guard(&self, e: &mut Engine) -> Result<RevisionGuard> {
+        Ok(RevisionGuard {
             parent_signature: self.signature(e)?,
             body_signature: self.body_signature(e)?,
             port_signature: self.port_signature(e)?,
             contract_signature: self.contract_signature(e)?,
-        };
-        self.seal = None;
-        Ok(guard)
+        })
     }
     pub fn finalize_revision(&mut self, e: &mut Engine, guard: &RevisionGuard) -> Result<()> {
         ensure(
@@ -511,7 +516,7 @@ impl Memory {
         inputs: &[Vec<f64>],
         mode: ReadMode,
     ) -> Result<Vec<Vec<f64>>> {
-        self.verify(e)?;
+        self.sealed_signature()?;
         let c = &self.metadata.config;
         let d = c.dimension;
         let width = if mode == ReadMode::Full {
@@ -598,6 +603,17 @@ impl Memory {
         Ok(model)
     }
     pub fn signature(&self, e: &mut Engine) -> Result<String> {
+        if let Some(seal) = &self.seal {
+            return Ok(seal.clone());
+        }
+        self.compute_signature(e)
+    }
+    pub fn sealed_signature(&self) -> Result<&str> {
+        self.seal.as_deref().ok_or_else(|| {
+            sejong_core::Error::Message("memory requires a sealed prepared snapshot".into())
+        })
+    }
+    fn compute_signature(&self, e: &mut Engine) -> Result<String> {
         let mut parameters = self
             .parameters
             .iter()
@@ -615,7 +631,7 @@ impl Memory {
         signature(e, &parameters, &self.metadata)
     }
     pub fn save(&self, e: &mut Engine, path: &Path) -> Result<()> {
-        self.verify(e)?;
+        let seal = self.sealed_signature()?;
         atomic_directory(path, |dir| {
             let tensors = self
                 .parameters
@@ -627,7 +643,7 @@ impl Memory {
                 dir.join("memory.json"),
                 json::to_vec_pretty(&self.metadata)?,
             )?;
-            std::fs::write(dir.join("signature"), self.signature(e)?)?;
+            std::fs::write(dir.join("signature"), seal)?;
             Ok(())
         })
     }
@@ -671,22 +687,27 @@ impl Memory {
             port,
             seal: None,
         };
+        let seal = std::fs::read_to_string(path.join("signature"))?;
         ensure(
-            memory.signature(e)? == std::fs::read_to_string(path.join("signature"))?,
+            memory.compute_signature(e)? == seal,
             "memory signature mismatch",
         )?;
-        let stored = memory.metadata.row_radius.clone();
-        memory.calibrate_internal(e)?;
         ensure(
-            stored.len() == memory.metadata.row_radius.len()
-                && stored
+            memory.metadata.row_radius.len() == memory.metadata.requests.len()
+                && memory.metadata.query_radius.len() == memory.metadata.requests.len()
+                && memory
+                    .metadata
+                    .row_radius
                     .iter()
-                    .zip(&memory.metadata.row_radius)
-                    .all(|(stored, current)| stored >= current),
-            "stored bounds differ from current original",
+                    .all(|r| r.is_finite() && (0. ..=1.).contains(r))
+                && memory
+                    .metadata
+                    .query_radius
+                    .iter()
+                    .all(|r| r.is_finite() && *r >= 0.),
+            "stored calibration dimensions or range differ",
         )?;
-        memory.metadata.row_radius = stored;
-        memory.seal = Some(memory.signature(e)?);
+        memory.seal = Some(seal);
         Ok(memory)
     }
 }

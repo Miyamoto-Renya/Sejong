@@ -143,6 +143,16 @@ pub fn pushforward(
     limit: usize,
 ) -> Result<Vec<f64>> {
     check(joint, input, output, arity, kernel, limit)?;
+    pushforward_prepared(joint, input, kernel, output, arity, limit)
+}
+fn pushforward_prepared(
+    joint: &[f64],
+    input: usize,
+    kernel: &[f64],
+    output: usize,
+    arity: usize,
+    limit: usize,
+) -> Result<Vec<f64>> {
     let count = length(output, arity, limit)?;
     let base = tensor_bytes(joint.len())?
         .saturating_add(tensor_bytes(kernel.len())?)
@@ -267,7 +277,29 @@ pub fn bounded_pushforward(
             && (0. ..=1.).contains(&previous_error),
         "valid joint read-error radii required",
     )?;
-    let transported = pushforward(joint, input, kernel, output, arity, limit)?;
+    check(joint, input, output, arity, kernel, limit)?;
+    bounded_pushforward_prepared(
+        joint,
+        input,
+        kernel,
+        output,
+        arity,
+        radii,
+        previous_error,
+        limit,
+    )
+}
+pub(super) fn bounded_pushforward_prepared(
+    joint: &[f64],
+    input: usize,
+    kernel: &[f64],
+    output: usize,
+    arity: usize,
+    radii: &[f64],
+    previous_error: f64,
+    limit: usize,
+) -> Result<(Vec<f64>, f64)> {
+    let transported = pushforward_prepared(joint, input, kernel, output, arity, limit)?;
     let mut increment = 0.;
     for (index, mass) in joint.iter().copied().enumerate() {
         if mass == 0. {

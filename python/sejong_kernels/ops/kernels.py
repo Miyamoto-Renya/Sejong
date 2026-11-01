@@ -26,14 +26,15 @@ def matmul(A,B,C,M,N,K,TA:tl.constexpr,TB:tl.constexpr,BM:tl.constexpr,BN:tl.con
     n=tl.program_id(1)*BN+tl.arange(0,BN)
     k=tl.arange(0,BK)
     accum=tl.full((BM,BN),0,tl.float32)
+    dtype:tl.constexpr=tl.float16 if A.dtype.element_ty==tl.float16 and B.dtype.element_ty==tl.float16 else tl.float32
     for start in range(tl.cdiv(K,BK)):
         kk=start*BK+k
         if TA: ap=kk[None,:]*M+m[:,None]
         else: ap=m[:,None]*K+kk[None,:]
         if TB: bp=n[None,:]*K+kk[:,None]
         else: bp=kk[:,None]*N+n[None,:]
-        a=tl.load(A+ap,(m[:,None]<M)&(kk[None,:]<K),0).to(tl.float32)
-        b=tl.load(B+bp,(kk[:,None]<K)&(n[None,:]<N),0).to(tl.float32)
+        a=tl.load(A+ap,(m[:,None]<M)&(kk[None,:]<K),0).to(dtype)
+        b=tl.load(B+bp,(kk[:,None]<K)&(n[None,:]<N),0).to(dtype)
         accum+=tl.dot(a,b,input_precision="ieee")
     tl.store(C+m[:,None]*N+n[None,:],accum,(m[:,None]<M)&(n[None,:]<N))
 
@@ -60,16 +61,30 @@ def rmsnorm(X,W,Y,D:tl.constexpr,EPS:tl.constexpr,BLOCK:tl.constexpr):
     tl.store(Y+r*D+j,x*inv*w,j<D)
 
 @tr.jit
-def rmsnorm_backward(X,W,DY,DX,DW,D:tl.constexpr,EPS:tl.constexpr,BLOCK:tl.constexpr):
-    r=tl.program_id(0); j=tl.arange(0,BLOCK)
-    x=tl.load(X+r*D+j,j<D,0).to(tl.float32)
+def rmsnorm_backward_partial(X,W,DY,DX,Partial,R,D:tl.constexpr,EPS:tl.constexpr,BR:tl.constexpr,BD:tl.constexpr):
+    group=tl.program_id(0)
+    r=group*BR+tl.arange(0,BR)
+    j=tl.arange(0,BD)
+    valid=(r[:,None]<R)&(j[None,:]<D)
+    x=tl.load(X+r[:,None]*D+j[None,:],valid,0).to(tl.float32)
     w=tl.load(W+j,j<D,0).to(tl.float32)
-    dy=tl.load(DY+r*D+j,j<D,0).to(tl.float32)
-    inv=tl.rsqrt(tl.sum(x*x,0)/D+EPS)
-    d=dy*w
-    dx=inv*(d-x*(tl.sum(d*x,0)/D)*inv*inv)
-    tl.store(DX+r*D+j,dx,j<D)
-    tl.atomic_add(DW+j,dy*x*inv,j<D,sem="relaxed")
+    dy=tl.load(DY+r[:,None]*D+j[None,:],valid,0).to(tl.float32)
+    inv=tl.where(r<R,tl.rsqrt(tl.sum(x*x,1)/D+EPS),0)
+    d=dy*w[None,:]
+    dx=inv[:,None]*(d-x*(tl.sum(d*x,1)/D)[:,None]*inv[:,None]*inv[:,None])
+    tl.store(DX+r[:,None]*D+j[None,:],dx,valid)
+    partial=tl.sum(dy*x*inv[:,None],0)
+    tl.store(Partial+group*D+j,partial,j<D)
+
+@tr.jit
+def rmsnorm_backward_reduce(Partial,DW,G,D:tl.constexpr,BG:tl.constexpr,BD:tl.constexpr):
+    j=tl.program_id(0)*BD+tl.arange(0,BD)
+    g=tl.arange(0,BG)
+    accum=tl.full((BG,BD),0,tl.float32)
+    for start in range(tl.cdiv(G,BG)):
+        rows=start*BG+g
+        accum+=tl.load(Partial+rows[:,None]*D+j[None,:],(rows[:,None]<G)&(j[None,:]<D),0)
+    tl.store(DW+j,tl.sum(accum,0),j<D)
 
 @tr.jit
 def swiglu(G,U,Y,n,BLOCK:tl.constexpr):
@@ -234,3 +249,39 @@ def gather_backward(DY,Ids,DX,N,D,BLOCK:tl.constexpr):
     i=tl.program_id(0)*BLOCK+tl.arange(0,BLOCK)
     row=tl.load(Ids+i//D,i<N*D,0)
     tl.atomic_add(DX+row*D+i%D,tl.load(DY+i,i<N*D,0),i<N*D,sem="relaxed")
+
+
+@tr.jit
+def loss_summary(X,Y,N,SLOT,WEIGHT,BLOCK:tl.constexpr):
+    lane=tl.arange(0,BLOCK)
+    total=tl.full((),0,tl.float64)
+    for start in range(0,N,BLOCK):
+        index=start+lane
+        value=tl.load(X+index,index<N,0).to(tl.float64)
+        total+=tl.sum(value,0)
+    tl.store(Y+SLOT,total*WEIGHT/N)
+
+
+@tr.jit
+def gradient_norm(Meta,Output,BLOCK:tl.constexpr):
+    tensor=tl.program_id(0)
+    offset=tensor*4
+    lo=tl.load(Meta+offset).to(tl.uint32).to(tl.uint64)
+    hi=tl.load(Meta+offset+1).to(tl.uint32).to(tl.uint64)
+    address=lo|(hi<<32)
+    count=tl.load(Meta+offset+2)
+    dtype=tl.load(Meta+offset+3)
+    lane=tl.arange(0,BLOCK)
+    total=tl.full((),0,tl.float64)
+    for start in range(0,count,BLOCK):
+        i=start+lane
+        if dtype==1:
+            value=tl.load(address.to(tl.pointer_type(tl.float64))+i,i<count,0).to(tl.float64)
+        elif dtype==2:
+            value=tl.load(address.to(tl.pointer_type(tl.float16))+i,i<count,0).to(tl.float64)
+        elif dtype==3:
+            value=tl.load(address.to(tl.pointer_type(tl.int32))+i,i<count,0).to(tl.float64)
+        else:
+            value=tl.load(address.to(tl.pointer_type(tl.float32))+i,i<count,0).to(tl.float64)
+        total+=tl.sum(value*value,0)
+    tl.store(Output+tensor,total)

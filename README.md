@@ -46,9 +46,23 @@ Memory는 선언된 context마다 동일한 FP64 실행 경로의 full/direct �
 
 값은 원시 byte열이다. JSON에서는 UTF-8 문자열 또는 `{"hex":"ff00fe"}`로 표현한다. `generate --raw`는 선택한 값을 그대로 출력한다. 독립 byte Transformer의 크기와 학습 설정은 `configs/*.toml`에 둔다.
 
-Byte·NativeValue 본체는 구간 단위 global 모델과 local encoder/decoder, GQA와 선택적 전문가를 지원한다. `train`은 정확 SGD와 공유 encoder의 교정 SGD를 실행하고, `benchmark`는 실제 학습·검증 loss·캐시 추론·실행 FLOPs를 비교한다. [계층 본체와 교정 학습](docs/compute.md)에 모델 예산·실행 경로·측정 명령을 정리했다.
+Byte·NativeValue 본체는 구간 단위 global 모델과 local encoder/decoder, GQA와 선택적 전문가를 지원한다. `train`은 순전파 기저 parameter VJP, 정확 SGD와 공유 encoder의 교정 SGD를 실행하고, `benchmark`는 실제 학습·검증 loss·캐시 추론·실행 FLOPs를 비교한다. [계층 본체와 교정 학습](docs/compute.md)에 모델 예산·실행 경로·측정 명령을 정리했다.
 
-기본 `configs/sejong.toml`은 계층·GQA·전문가 본체를 정확 SGD로 학습한다. [RX 6600 실측](docs/measurements/2026-11-01/README.md)에서 같은 4,096-byte 정확 미분 step은 dense의 1.2383초에서 0.2658초로 줄었고, 주요 FLOPs는 9.16배 줄었다. 교정 SGD와 폭을 2배 늘린 구성도 같은 측정 명령으로 실행했다.
+기본 `configs/sejong.toml`은 계층·GQA·전문가 본체의 가중치를 [순전파 기저와 잔차 표집](docs/parameter-vjp.md)으로 미분한다. 입력 미분은 기존 역전파를 실행하고, SGD는 저랭크 인수와 선택 행을 직접 합산한다. NativeValue 학습도 같은 미분을 Adam 갱신에 연결한다. [구조 변경의 RX 6600 실측](docs/measurements/2026-11-01/README.md)에는 dense·계층·교정 SGD·확대 본체의 비교를 기록했다.
+
+[준비 비용을 줄인 RX 6600 실측](docs/measurements/2026-11-01-parameter-vjp-overhead/README.md)에서 기저와 선택표를 관측 안에서 공유해 초기 압축 구현의 평균 step 시간을 0.278→0.259초로 줄였다. 같은 실행의 기존 SGD는 0.263초, 전역 타일 SGD의 정확 미분은 0.257초였다. 전체 byte 모델과 NativeValue의 학습·저장·재개를 검증했다.
+
+[검사 비용 정리](docs/research/check-overhead-changes.md)는 반복 검사 38개 묶음을 삭제·준비 경계·선택한 진단으로 정리한 구현이다. [후속 실측](docs/measurements/2026-11-01-check-pruning/README.md)에서 기존 정확 SGD는 263.39→257.91ms/step, 기본 압축 경로는 259.39→259.63ms/step이었다. 추론은 봉인 digest와 준비된 registry를 재사용하고, `verify`가 현재 parameter를 재해시한다.
+
+[저수준 최적화 조사](docs/research/low-level-optimization.md)는 활성값 보존·step별 FP16 mirror·packed dot2·gradient epilogue·GPU expert 실행 계획의 우선순위를 정리한다. [실제 실험](docs/measurements/2026-11-01-low-level/README.md)에서 활성값 보존 경로는 같은 본체의 주요 FLOPs를 17.45%, 평균 step 시간을 16.14% 줄였다. 독립 F16 GEMM의 dot2 실험은 세 형상에서 1.235–1.327×를 기록했다.
+
+[Attention·RMSNorm·projection·실행 계획의 심화 연구](docs/research/attention-projection-execution-plan.md)는 Delta 공유, atomic partial reduction, QKV·gate/up 다중 출력과 arena·HIP graph의 연결을 설계한다. [독립 GPU 실험](docs/measurements/2026-11-01-fused-execution/README.md)에 커널별 시간·FP64 대조·CAS ISA와 replay 결과를 보관했다.
+
+[생산 커널 적용 결과](docs/measurements/2026-11-01-fused-applied/README.md)에서 RMSNorm·Delta 공유·QKV/gate-up 순전파 결합은 같은 본체의 평균 학습 시간을 259.83→226.31ms/step으로 줄였다. Peak 메모리는472MiB, 같은66-step 검증 BPB는7.934876이었다. 원래 parameter와 논리 역전파를 유지하며 cached 추론에도 결합 projection을 사용한다.
+
+[최신 학습 가속 연구](/home/renya/Sejong/docs/research/latest-training-speed.md)는 2026-11-01 기준 논문·연구 발표59편을 현재 코드와 대조한다. GPU grouped MoE·query tile attention·RDNA2 실행 계획, layer dropout·잔차 보정 입력 VJP·S3R의 비용식과 적용 순서를 정리했다.
+
+[현재 구조에 맞춘 가속 적용](/home/renya/Sejong/docs/measurements/2026-11-01-architecture-fit/README.md)은 활성값 보존·실행 batch8/누적1·dot2를 기본 경로에 연결했다. 두 Triton 파일과 기본 프로파일을 바꾼 생산 경로의66-step 실행에서 평균111.436ms, 검증 BPB7.934923, peak629MiB를 기록했다. 앞선 독립 실험본의520-step 비교는222.499→114.034ms였다. Dtype 선택은 컴파일 시 확정하며 원자료·실험 패치를 함께 보관했다.
 
 ## 코드와 확인
 

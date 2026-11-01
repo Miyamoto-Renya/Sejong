@@ -50,6 +50,14 @@ impl Arena {
                     .all(|r| r.len() == outcomes && resources::normalized(r)),
             "normalized input-sized event laws required",
         )?;
+        Self::from_model_laws(laws, predicates, people, limit)
+    }
+    pub(super) fn from_model_laws(
+        laws: Vec<Vec<f64>>,
+        predicates: Vec<usize>,
+        people: usize,
+        limit: usize,
+    ) -> Result<Self> {
         let domains_entries = laws
             .iter()
             .map(|p| p.iter().filter(|p| **p > 0.).count())

@@ -1,0 +1,98 @@
+--- a/crates/sejong-gpu/src/graph.rs
++++ b/crates/sejong-gpu/src/graph.rs
+@@ -200,6 +200,15 @@
+         self.nodes[v.0].parameter = self.nodes[x.0].parameter;
+         Ok(v)
+     }
++    /// 준비된 cast 값을 원래 parameter leaf의 미분 경로에 연결한다.
++    pub fn cast_prepared(&mut self, x: Var, value: Tensor) -> Var {
++        if self.tensor(x).dtype == value.dtype {
++            return x;
++        }
++        let v = self.insert(value, Op::Cast(x), self.needs(&[x]));
++        self.nodes[v.0].parameter = self.nodes[x.0].parameter;
++        v
++    }
+     pub fn add(&mut self, x: Var, z: Var) -> Result<Var> {
+         let y = self.engine.add(
+             &self.nodes[x.0].value,
+--- a/crates/sejong-model/src/lib.rs
++++ b/crates/sejong-model/src/lib.rs
+@@ -25,6 +25,10 @@
+     pub leaves: Vec<Var>,
+     pub compute: Vec<Var>,
+     corrections: Vec<Option<LowRankCorrection>>,
++}
++/// 한 optimizer step의 고정된 master weights에서 준비한 compute 값.
++pub struct StepWeights {
++    values: Vec<Tensor>,
+ }
+ #[derive(Clone)]
+ pub struct LowRankCorrection {
+@@ -217,6 +221,39 @@
+             leaves.push(leaf);
+             compute.push(cast);
+         }
++        self.finish_binding(leaves, compute, corrections)
++    }
++    pub fn prepare_step_weights(&self, engine: &mut Engine) -> Result<StepWeights> {
++        let values = self
++            .parameters
++            .iter()
++            .map(|p| engine.cast(&p.value, self.config.precision))
++            .collect::<Result<Vec<_>>>()?;
++        Ok(StepWeights { values })
++    }
++    pub fn bind_step_weights(
++        &self,
++        g: &mut Graph,
++        trainable: bool,
++        corrections: &[LowRankCorrection],
++        weights: &StepWeights,
++    ) -> Result<Binding> {
++        let mut leaves = Vec::with_capacity(self.parameters.len());
++        let mut compute = Vec::with_capacity(self.parameters.len());
++        for (p, value) in self.parameters.iter().zip(&weights.values) {
++            let leaf = g.parameter(p.value.clone(), trainable);
++            let cast = g.cast_prepared(leaf, value.clone());
++            leaves.push(leaf);
++            compute.push(cast);
++        }
++        self.finish_binding(leaves, compute, corrections)
++    }
++    fn finish_binding(
++        &self,
++        leaves: Vec<Var>,
++        compute: Vec<Var>,
++        corrections: &[LowRankCorrection],
++    ) -> Result<Binding> {
+         let mut bound = vec![None; self.parameters.len()];
+         for correction in corrections {
+             ensure(
+--- a/crates/sejong-train/src/control_variate.rs
++++ b/crates/sejong-train/src/control_variate.rs
+@@ -513,6 +513,7 @@
+         let weights = control_weights(&observations, tc, &mut state.sampling_rng);
+         let controls = weights.iter().filter(|&&w| w > 0.).count();
+         let corrections = state.corrections();
++        let step_weights = model.prepare_step_weights(&mut engine)?;
+         let mut gradients = vec![None; model.parameters.len()];
+         let mut compact_gradients = vec![ParameterGradient::default(); model.parameters.len()];
+         let mut vjp_statistics = VjpStatistics::default();
+@@ -544,7 +545,7 @@
+                 )?;
+             }
+             let binding = if control {
+-                model.bind_with_corrections(&mut graph, true, &corrections)?
++                model.bind_step_weights(&mut graph, true, &corrections, &step_weights)?
+             } else {
+                 model.bind_encoder(&mut graph, false)?
+             };
+@@ -718,6 +719,7 @@
+                 control_number += 1;
+             }
+         }
++        drop(step_weights);
+         drop(corrections);
+         let loss = engine.to_f64(&loss_summaries)?.iter().sum::<f64>();
+         let mut base_norm = if measure_gradient && compact_plan.is_none() {

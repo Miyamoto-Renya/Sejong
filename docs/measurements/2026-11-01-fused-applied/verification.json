@@ -1,0 +1,324 @@
+{
+  "cpu_tests_passed": 5,
+  "workspace_all_targets": "passed",
+  "kernel_profile_build": "passed",
+  "hierarchy": {
+    "artifact_reload_max_error": 0.0,
+    "batch": 2,
+    "batch_max_error": 0.0,
+    "causal_suffix_max_error": 0.0,
+    "f16_gradient_tensors": 67,
+    "f16_streaming_max_error": 0.0,
+    "gradient_analytical": -0.017531185231686282,
+    "gradient_error": 1.6676981533236823e-07,
+    "gradient_numerical": -0.017531352001501615,
+    "native_law": [
+      0.8601315499439072,
+      0.13986845005609272
+    ],
+    "native_reload_law_error": 0.0,
+    "native_steps": 2,
+    "parameters": 42632,
+    "patch": 3,
+    "scope": "GPU configured hierarchy/GQA/MoE model contract",
+    "sequence": 11,
+    "streaming_chunk_patterns": [
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        4,
+        2,
+        4
+      ],
+      [
+        11
+      ],
+      [
+        4,
+        1,
+        1,
+        1,
+        4
+      ],
+      [
+        8,
+        1,
+        2
+      ],
+      [
+        6,
+        1,
+        4
+      ]
+    ],
+    "streaming_launches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "streaming_max_error": 1.430511474609375e-06,
+    "window": 5
+  },
+  "byte": {
+    "continuous_loss": 6.089361780846957,
+    "directory": ".cache/fused-integration/byte",
+    "full_coverage_sgd_max_abs_error": 4.656612873077393e-10,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "resume_optimizer_rng_max_abs_error": 0.0,
+    "resume_roundoff_budget": 7.152588068515015e-07,
+    "resume_weights_max_abs_error": 0.0,
+    "resumed_loss": 6.089361780846957,
+    "steps": 6
+  },
+  "native_value": {
+    "loss": 4.645290456712246,
+    "model": {
+      "context": 2048,
+      "experts": {
+        "count": 4,
+        "ffn_width": 384,
+        "top_k": 2
+      },
+      "ffn_width": 1536,
+      "heads": 8,
+      "hierarchy": {
+        "checkpoint_decoder": false,
+        "checkpoint_encoder": false,
+        "decoder_ffn_width": 384,
+        "decoder_heads": 2,
+        "decoder_layers": 2,
+        "decoder_width": 128,
+        "encoder_ffn_width": 384,
+        "encoder_heads": 2,
+        "encoder_layers": 2,
+        "encoder_width": 128,
+        "local_window": 128,
+        "patch_size": 8
+      },
+      "id": "sejong",
+      "kv_heads": 4,
+      "layers": 8,
+      "norm_epsilon": 1.1920928955078125e-07,
+      "precision": "f16",
+      "rope_theta": 10000.0,
+      "seed": 42,
+      "width": 512
+    },
+    "parameter_rng_equal": true,
+    "parameter_vjp": {
+      "block_rows": 32,
+      "rank": 16,
+      "residual_fraction": 0.25,
+      "seed": 124
+    },
+    "probability_comparison_budget": 6.294646689111215e-05,
+    "reload_weights_max_abs_error": 0.0,
+    "resume_probability_max_abs_error": 0.0,
+    "resume_weights_max_abs_error": 7.450580596923828e-09,
+    "resumed_loss": 4.645290456712246,
+    "steps": 2
+  },
+  "projection": {
+    "scope": "production Triton kernels against existing matmul/SwiGLU kernels",
+    "source_sha256": "6dbe5c497244c032e7dcc4779a99e816c56fe9ef8b41c2694ecc7f78fc288ab0",
+    "runs": [
+      {
+        "dtype": "fp16",
+        "M": 64,
+        "K": 512,
+        "query": 512,
+        "kv": 256,
+        "errors": {
+          "q": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "k": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "v": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "gate": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "up": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "active": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          }
+        }
+      },
+      {
+        "dtype": "fp16",
+        "M": 35,
+        "K": 67,
+        "query": 71,
+        "kv": 33,
+        "errors": {
+          "q": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "k": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "v": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "gate": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "up": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "active": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          }
+        }
+      },
+      {
+        "dtype": "fp32",
+        "M": 35,
+        "K": 67,
+        "query": 71,
+        "kv": 33,
+        "errors": {
+          "q": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "k": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "v": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "gate": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "up": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          },
+          "active": {
+            "max_abs": 0.0,
+            "relative_l2": 0.0,
+            "different_elements": 0
+          }
+        }
+      }
+    ]
+  },
+  "rms_streaming": {
+    "R": 1031,
+    "D": 257,
+    "BR": 4,
+    "BG": 64,
+    "groups": 258,
+    "dx_relative_l2": 5.840956000172317e-08,
+    "dw_relative_l2": 9.88794413594433e-08,
+    "dw_max_abs": 4.786702923809116e-06,
+    "compiled": [
+      {
+        "key": "partial",
+        "shared_bytes": 64,
+        "threads": 128,
+        "global_scratch": 0,
+        "binary_sha256": "b00a8095ba53dcd8755045adfdaf9f5401a0705a23524330a40459ec46e4a2b6"
+      },
+      {
+        "key": "reduce",
+        "shared_bytes": 512,
+        "threads": 128,
+        "global_scratch": 0,
+        "binary_sha256": "62fc010a7c554415044afd793ff47d43c6350bb2ff3e57d6f439c17d534335f0"
+      }
+    ]
+  },
+  "control_variate": {
+    "all_controls_sgd_max_error": 0.0,
+    "basis_change_squared_norm": 124.22222369959127,
+    "directory": "/home/renya/Sejong/.cache/cv-contract-78507",
+    "predictor_squared_norm": 0.004813203140983546,
+    "resume_optimizer_max_error": 5.364418029785156e-07,
+    "resume_weights_max_error": 2.9802322387695312e-08
+  }
+}

@@ -246,6 +246,7 @@ fn main() -> Result<()> {
         "revision resume differs",
     )?;
     let mut value_spec = ValueTraining {
+        parameter_vjp: None,
         model: ModelConfig {
             id: "sejong-native-resource-batch".into(),
             width: 8,

@@ -2,7 +2,13 @@
 use crate::{Engine, Tensor};
 use std::rc::Rc;
 type Recompute = Rc<dyn for<'b> Fn(&mut Graph<'b>, &[Var]) -> Result<Var>>;
+use crate::parameter_vjp::{
+    FactoredRows, FeatureSelection, ParameterGradient, PreparedVjp, TokenBasis, VjpStatistics,
+    budget, selects_compression,
+};
 use sejong_core::{DType, Result, ensure};
+use sejong_core::{ParameterVjpConfig, Rng};
+use std::collections::{HashMap, HashSet};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Var(pub usize);
 #[derive(Clone)]
@@ -44,12 +50,32 @@ struct Node {
     projected_gradient: Option<Tensor>,
     op: Op,
     requires_grad: bool,
+    parameter: bool,
+    factored: Vec<FactoredRows>,
+}
+/// 실제 역전파의 선형 연산 입력·출력·cotangent를 보존하는 진단 표본.
+#[derive(Clone)]
+pub struct LinearAdjoint {
+    pub input: Var,
+    pub weight: Var,
+    pub output: Var,
+    pub x: Tensor,
+    pub w: Tensor,
+    pub y: Tensor,
+    pub dy: Tensor,
 }
 pub struct Graph<'a> {
     pub engine: &'a mut Engine,
     nodes: Vec<Node>,
     training: bool,
     pub checkpointing: bool,
+    linear_adjoints: Option<Vec<LinearAdjoint>>,
+    parameter_policy: Option<(ParameterVjpConfig, Rng)>,
+    parameter_groups: HashMap<usize, Option<(PreparedVjp, HashSet<usize>)>>,
+    parameter_members: HashMap<usize, Vec<usize>>,
+    token_bases: HashMap<(usize, usize), TokenBasis>,
+    feature_selections: HashMap<usize, FeatureSelection>,
+    parameter_statistics: VjpStatistics,
 }
 impl<'a> Graph<'a> {
     pub fn new(engine: &'a mut Engine, training: bool) -> Self {
@@ -58,7 +84,52 @@ impl<'a> Graph<'a> {
             nodes: vec![],
             training,
             checkpointing: training,
+            linear_adjoints: None,
+            parameter_policy: None,
+            parameter_groups: HashMap::new(),
+            parameter_members: HashMap::new(),
+            token_bases: HashMap::new(),
+            feature_selections: HashMap::new(),
+            parameter_statistics: VjpStatistics::default(),
         }
+    }
+    pub fn configure_parameter_vjp(&mut self, config: ParameterVjpConfig, rng: Rng) -> Result<()> {
+        ensure(
+            self.training && self.nodes.is_empty(),
+            "parameter VJP requires a fresh training graph",
+        )?;
+        self.parameter_policy = Some((config, rng));
+        Ok(())
+    }
+    pub fn parameter_vjp_rng(&self) -> Option<Rng> {
+        self.parameter_policy.as_ref().map(|(_, rng)| rng.clone())
+    }
+    pub fn parameter_vjp_statistics(&self) -> &VjpStatistics {
+        &self.parameter_statistics
+    }
+    pub fn parameter_gradient(&self, v: Var) -> ParameterGradient {
+        ParameterGradient {
+            dense: self.nodes[v.0].gradient.clone(),
+            terms: self.nodes[v.0].factored.clone(),
+        }
+    }
+    pub fn parameter(&mut self, value: Tensor, trainable: bool) -> Var {
+        let v = self.leaf(value, trainable);
+        self.nodes[v.0].parameter = true;
+        v
+    }
+    /// 전체 tape를 구성한 진단 실행에서 선형 역전파 operand를 수집한다.
+    /// Forward 전에 checkpointing을 false로 설정하면 원래 Var 인덱스를 보존한다.
+    pub fn enable_linear_adjoint_trace(&mut self) -> Result<()> {
+        ensure(
+            self.training && !self.checkpointing && self.nodes.is_empty(),
+            "linear adjoint trace requires a fresh training graph with checkpointing=false",
+        )?;
+        self.linear_adjoints = Some(Vec::new());
+        Ok(())
+    }
+    pub fn linear_adjoint_trace(&self) -> &[LinearAdjoint] {
+        self.linear_adjoints.as_deref().unwrap_or(&[])
     }
     fn insert(&mut self, value: Tensor, op: Op, requires_grad: bool) -> Var {
         let i = self.nodes.len();
@@ -72,6 +143,8 @@ impl<'a> Graph<'a> {
                 Op::Leaf
             },
             requires_grad: self.training && requires_grad,
+            parameter: false,
+            factored: Vec::new(),
         });
         Var(i)
     }
@@ -105,6 +178,7 @@ impl<'a> Graph<'a> {
     pub fn value(&mut self, v: Var) -> Result<Vec<f32>> {
         self.engine.to_f32(&self.nodes[v.0].value)
     }
+    /// Dense component of the leaf adjoint.
     pub fn gradient(&self, v: Var) -> Option<&Tensor> {
         self.nodes[v.0].gradient.as_ref()
     }
@@ -122,7 +196,9 @@ impl<'a> Graph<'a> {
             return Ok(x);
         }
         let y = self.engine.cast(&self.nodes[x.0].value, dtype)?;
-        Ok(self.insert(y, Op::Cast(x), self.needs(&[x])))
+        let v = self.insert(y, Op::Cast(x), self.needs(&[x]));
+        self.nodes[v.0].parameter = self.nodes[x.0].parameter;
+        Ok(v)
     }
     pub fn add(&mut self, x: Var, z: Var) -> Result<Var> {
         let y = self.engine.add(
@@ -142,6 +218,28 @@ impl<'a> Graph<'a> {
             self.tensor(a).dtype,
         )?;
         Ok(self.insert(y, Op::Matmul(a, b), self.needs(&[a, b])))
+    }
+    pub fn project_qkv(&mut self, x: Var, wq: Var, wk: Var, wv: Var) -> Result<(Var, Var, Var)> {
+        let (q, k, v) = self.engine.project_qkv(
+            &self.nodes[x.0].value,
+            &self.nodes[wq.0].value,
+            &self.nodes[wk.0].value,
+            &self.nodes[wv.0].value,
+        )?;
+        let q = self.insert(q, Op::Matmul(x, wq), self.needs(&[x, wq]));
+        let k = self.insert(k, Op::Matmul(x, wk), self.needs(&[x, wk]));
+        let v = self.insert(v, Op::Matmul(x, wv), self.needs(&[x, wv]));
+        Ok((q, k, v))
+    }
+    pub fn gate_up(&mut self, x: Var, wg: Var, wu: Var) -> Result<Var> {
+        let (g, u, h) = self.engine.gate_up(
+            &self.nodes[x.0].value,
+            &self.nodes[wg.0].value,
+            &self.nodes[wu.0].value,
+        )?;
+        let g = self.insert(g, Op::Matmul(x, wg), self.needs(&[x, wg]));
+        let u = self.insert(u, Op::Matmul(x, wu), self.needs(&[x, wu]));
+        Ok(self.insert(h, Op::SwiGlu(g, u), self.needs(&[g, u])))
     }
     pub fn low_rank_matmul(
         &mut self,
@@ -406,10 +504,6 @@ impl<'a> Graph<'a> {
         if !self.nodes[v.0].requires_grad {
             return Ok(());
         }
-        ensure(
-            g.shape == self.nodes[v.0].value.shape,
-            "gradient shape mismatch",
-        )?;
         if let Some(current) = &self.nodes[v.0].gradient {
             self.nodes[v.0].gradient = Some(self.engine.add(current, &g, 1., DType::F32)?);
         } else {
@@ -454,7 +548,27 @@ impl<'a> Graph<'a> {
         self.propagate()
     }
     fn propagate(&mut self) -> Result<()> {
+        if self.parameter_policy.is_some() {
+            self.parameter_members.clear();
+            for (index, node) in self.nodes.iter().enumerate() {
+                if let Op::Matmul(input, weight) = node.op {
+                    if self.nodes[weight.0].parameter
+                        && self.nodes[weight.0].requires_grad
+                        && self.nodes[input.0].value.shape[0] >= self.nodes[input.0].value.shape[1]
+                    {
+                        self.parameter_members
+                            .entry(input.0)
+                            .or_default()
+                            .push(index);
+                    }
+                }
+            }
+        }
         for i in (0..self.nodes.len()).rev() {
+            if let Op::Cast(x) = self.nodes[i].op {
+                let terms = std::mem::take(&mut self.nodes[i].factored);
+                self.nodes[x.0].factored.extend(terms);
+            }
             let Some(dy) = self.nodes[i].gradient.clone() else {
                 continue;
             };
@@ -646,27 +760,38 @@ impl<'a> Graph<'a> {
                         .collect();
                     let mut nested = Graph::new(self.engine, true);
                     nested.checkpointing = false;
+                    nested.parameter_policy = self.parameter_policy.clone();
+                    nested.token_bases = self.token_bases.clone();
+                    nested.feature_selections = self.feature_selections.clone();
                     let variables: Vec<_> = tensors
                         .into_iter()
                         .map(|(t, required)| nested.leaf(t, required))
                         .collect();
+                    for (&source, &destination) in inputs.iter().zip(&variables) {
+                        nested.nodes[destination.0].parameter = self.nodes[source.0].parameter;
+                    }
                     let output = forward(&mut nested, &variables)?;
                     nested.backward_seeded(&[(output, dy)])?;
                     let gradients: Vec<_> = variables
                         .iter()
-                        .map(|v| nested.gradient(*v).cloned())
+                        .map(|v| nested.parameter_gradient(*v))
                         .collect();
                     let projected: Vec<_> = variables
                         .iter()
                         .map(|v| nested.projected_gradient(*v).cloned())
                         .collect();
+                    self.parameter_policy = nested.parameter_policy.take();
+                    self.token_bases = std::mem::take(&mut nested.token_bases);
+                    self.feature_selections = std::mem::take(&mut nested.feature_selections);
+                    self.parameter_statistics.add(&nested.parameter_statistics);
                     drop(nested);
                     for ((input, gradient), target) in
                         inputs.into_iter().zip(gradients).zip(projected)
                     {
-                        if let Some(gradient) = gradient {
+                        if let Some(gradient) = gradient.dense {
                             self.accumulate(input, gradient)?;
                         }
+                        self.nodes[input.0].factored.extend(gradient.terms);
                         if let Some(target) = target {
                             self.accumulate_projected(input, target)?;
                         }
@@ -690,6 +815,17 @@ impl<'a> Graph<'a> {
                     self.accumulate(z, dy)?;
                 }
                 Op::Matmul(a, b) => {
+                    if let Some(trace) = &mut self.linear_adjoints {
+                        trace.push(LinearAdjoint {
+                            input: a,
+                            weight: b,
+                            output: Var(i),
+                            x: self.nodes[a.0].value.clone(),
+                            w: self.nodes[b.0].value.clone(),
+                            y: self.nodes[i].value.clone(),
+                            dy: dy.clone(),
+                        });
+                    }
                     if self.needs(&[a]) {
                         let da = self.engine.matmul(
                             &dy,
@@ -701,14 +837,18 @@ impl<'a> Graph<'a> {
                         self.accumulate(a, da)?;
                     }
                     if self.needs(&[b]) {
-                        let db = self.engine.matmul(
-                            &self.nodes[a.0].value,
-                            &dy,
-                            true,
-                            false,
-                            DType::F32,
-                        )?;
-                        self.accumulate(b, db)?;
+                        if let Some(term) = self.compressed_parameter_vjp(i, a, b, &dy)? {
+                            self.nodes[b.0].factored.push(term);
+                        } else {
+                            let db = self.engine.matmul(
+                                &self.nodes[a.0].value,
+                                &dy,
+                                true,
+                                false,
+                                DType::F32,
+                            )?;
+                            self.accumulate(b, db)?;
+                        }
                     }
                 }
                 Op::Embedding(w, ids) => {
@@ -770,5 +910,97 @@ impl<'a> Graph<'a> {
             }
         }
         Ok(())
+    }
+
+    fn compressed_parameter_vjp(
+        &mut self,
+        operation: usize,
+        a: Var,
+        b: Var,
+        dy: &Tensor,
+    ) -> Result<Option<FactoredRows>> {
+        if self.parameter_policy.is_none() || !self.nodes[b.0].parameter {
+            return Ok(None);
+        }
+        if self.nodes[a.0].value.shape[0] < self.nodes[a.0].value.shape[1] {
+            self.parameter_statistics.dense_matrices += 1;
+            return Ok(None);
+        }
+        if !self.parameter_groups.contains_key(&a.0) {
+            let members = &self.parameter_members[&a.0];
+            let donor = *members
+                .iter()
+                .max_by_key(|&&i| self.nodes[i].value.shape[1])
+                .unwrap();
+            let x = &self.nodes[a.0].value;
+            let n = x.shape[0];
+            let width = x.shape[1];
+            let donor_width = self.nodes[donor].value.shape[1];
+            let config = &self.parameter_policy.as_ref().unwrap().0;
+            let mut active: HashSet<_> = members.iter().copied().collect();
+            loop {
+                let count = active.len();
+                if count == 0 {
+                    break;
+                }
+                active.retain(|&i| {
+                    selects_compression(
+                        config,
+                        n,
+                        width,
+                        self.nodes[i].value.shape[1],
+                        donor_width,
+                        count,
+                    )
+                });
+                if active.len() == count {
+                    break;
+                }
+            }
+            let group = if active.is_empty() {
+                None
+            } else {
+                let (config, rng) = self.parameter_policy.as_mut().unwrap();
+                let rank = budget(config, n, width, donor_width).0;
+                let basis = self.token_bases.get(&(n, rank));
+                let prepared = self.engine.prepare_parameter_vjp_reusing(
+                    &self.nodes[a.0].value,
+                    &self.nodes[donor].value,
+                    config,
+                    rng,
+                    basis,
+                    self.feature_selections.get(&width),
+                )?;
+                if basis.is_none() {
+                    self.parameter_statistics.basis_groups += 1;
+                    self.token_bases.insert(
+                        (n, rank),
+                        TokenBasis {
+                            q: prepared.q.clone(),
+                            columns: prepared.selected_columns.clone(),
+                            donor_width: prepared.basis_donor_width,
+                        },
+                    );
+                }
+                self.feature_selections
+                    .entry(width)
+                    .or_insert_with(|| FeatureSelection {
+                        rows: prepared.selected_rows.clone(),
+                        map: prepared.row_map.clone(),
+                    });
+                self.parameter_statistics.projection_groups += 1;
+                Some((prepared, active))
+            };
+            self.parameter_groups.insert(a.0, group);
+        }
+        if let Some((prepared, active)) = self.parameter_groups.get(&a.0).unwrap() {
+            if active.contains(&operation) {
+                let term = self.engine.parameter_vjp(prepared, dy)?;
+                self.parameter_statistics.compressed_matrices += 1;
+                return Ok(Some(term));
+            }
+        }
+        self.parameter_statistics.dense_matrices += 1;
+        Ok(None)
     }
 }

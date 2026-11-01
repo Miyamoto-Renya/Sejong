@@ -111,12 +111,48 @@ pub struct Composite {
     pub catalog: Vec<String>,
     pub budgets: Budgets,
     signatures: BTreeMap<String, String>,
+    lexical_registry: lexical::Registry,
 }
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Task {
     Flat,
     Prefix(Program),
     Fact { goal: usize, hop: usize, row: usize },
+}
+#[derive(Default)]
+struct Frontier {
+    tasks: BTreeMap<Task, f64>,
+    bytes: usize,
+}
+impl std::ops::Deref for Frontier {
+    type Target = BTreeMap<Task, f64>;
+    fn deref(&self) -> &Self::Target {
+        &self.tasks
+    }
+}
+impl Frontier {
+    fn add(&mut self, task: Task, mass: f64) {
+        if mass > 0. {
+            match self.tasks.entry(task) {
+                std::collections::btree_map::Entry::Occupied(mut entry) => *entry.get_mut() += mass,
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    self.bytes = self.bytes.saturating_add(task_bytes(entry.key()));
+                    entry.insert(mass);
+                }
+            }
+        }
+    }
+    fn remove(&mut self, task: &Task) {
+        if let Some((key, _)) = self.tasks.remove_entry(task) {
+            self.bytes -= task_bytes(&key);
+        }
+    }
+}
+fn task_bytes(task: &Task) -> usize {
+    std::mem::size_of::<(Task, f64)>().saturating_add(match task {
+        Task::Prefix(program) => program.steps.capacity() * std::mem::size_of::<Step>(),
+        _ => 0,
+    })
 }
 #[derive(Serialize, Deserialize)]
 pub struct Sample {
@@ -173,27 +209,7 @@ impl Composite {
             .iter()
             .map(|p| Classifier::load(e, &base.join(p)))
             .collect::<Result<Vec<_>>>()?;
-        ensure(
-            lexica.iter().all(|l| {
-                l.metadata.role == Role::Lexical
-                    && l.metadata
-                        .meanings
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        == ["use", "ignore"]
-            }),
-            "lexical original role required",
-        )?;
-        let mut phrases = BTreeSet::new();
-        for lex in &lexica {
-            for phrase in &lex.metadata.phrases {
-                ensure(
-                    phrases.insert(phrase.to_ascii_lowercase()),
-                    "lexical namespaces must be disjoint",
-                )?;
-            }
-        }
+        let lexical_registry = lexical::Registry::compile(&lexica)?;
         ensure(
             !spec.extra.contains_key("a") && !spec.extra.contains_key("b"),
             "extra original IDs must preserve primary A/B names",
@@ -262,6 +278,7 @@ impl Composite {
             catalog: spec.catalog.clone(),
             budgets: spec.budgets.clone(),
             signatures: BTreeMap::new(),
+            lexical_registry,
         };
         model.seal_snapshot(e)?;
         Ok(model)
@@ -299,6 +316,25 @@ impl Composite {
         Ok(out)
     }
     pub fn verify(&self, e: &mut Engine) -> Result<()> {
+        let mut encoders = BTreeSet::new();
+        for model in [
+            &self.scene,
+            &self.instruction,
+            &self.request,
+            &self.query_model,
+        ]
+        .into_iter()
+        .chain(self.lexica.iter())
+        {
+            if model
+                .encoder_instance_id()
+                .is_some_and(|id| !encoders.insert(id))
+            {
+                model.verify_head(e)?;
+            } else {
+                model.verify(e)?;
+            }
+        }
         for fact in &self.facts {
             fact.verify(e)?;
         }
@@ -308,9 +344,6 @@ impl Composite {
         )
     }
     fn seal_snapshot(&mut self, e: &mut Engine) -> Result<()> {
-        for fact in &self.facts {
-            fact.verify(e)?;
-        }
         self.signatures = self.current_signatures(e)?;
         Ok(())
     }
@@ -454,8 +487,14 @@ impl Composite {
         )?;
         Ok(refs)
     }
-    fn binding(&self, e: &mut Engine, text: &str, refs: &[String]) -> Result<(Vec<f64>, f64)> {
-        lexical::bind(
+    fn binding(
+        &self,
+        e: &mut Engine,
+        text: &str,
+        refs: &[String],
+        limit: usize,
+    ) -> Result<(Vec<f64>, f64)> {
+        lexical::bind_prepared(
             e,
             text,
             refs,
@@ -463,7 +502,8 @@ impl Composite {
             &self.instruction,
             &self.request,
             &self.lexica,
-            &self.budgets,
+            &self.lexical_registry,
+            limit,
         )
     }
     fn interpretation(
@@ -474,7 +514,7 @@ impl Composite {
         limit: usize,
     ) -> Result<(Option<(Vec<f64>, f64)>, Option<QueryPlan>, Option<Arena>)> {
         if q.story.is_empty() {
-            return Ok((Some(self.binding(e, &q.question, refs)?), None, None));
+            return Ok((Some(self.binding(e, &q.question, refs, limit)?), None, None));
         }
         inventory(&q.predicates, "predicate identities")?;
         ensure(
@@ -491,6 +531,8 @@ impl Composite {
         let mut laws: Vec<Vec<f64>> = vec![];
         let mut predicates: Vec<usize> = vec![];
         let mut scene_rows: BTreeMap<String, Vec<f64>> = BTreeMap::new();
+        let mut law_data_bytes = 0usize;
+        let mut scene_cache_bytes = 0usize;
         for event in &q.story {
             let words = event
                 .split(|c: char| !c.is_ascii_alphabetic())
@@ -508,22 +550,12 @@ impl Composite {
             let predicate = hits[0];
             if used.contains(&predicate) {
                 let row_bytes = resources::bytes::<f64>(Role::Scene.classes_for(refs.len(), 0)?)?;
-                let retained = laws.iter().try_fold(
-                    plan.memory_bytes()
-                        .saturating_add(resources::bytes::<Vec<f64>>(laws.capacity())?)
-                        .saturating_add(resources::bytes::<usize>(predicates.capacity())?),
-                    |n, row| -> Result<usize> {
-                        Ok(n.saturating_add(resources::bytes::<f64>(row.capacity())?))
-                    },
-                )?;
-                let retained =
-                    scene_rows
-                        .iter()
-                        .try_fold(retained, |n, (text, row)| -> Result<usize> {
-                            Ok(n.saturating_add(text.capacity())
-                                .saturating_add(resources::bytes::<f64>(row.capacity())?)
-                                .saturating_add(std::mem::size_of::<(String, Vec<f64>)>()))
-                        })?;
+                let retained = plan
+                    .memory_bytes()
+                    .saturating_add(resources::bytes::<Vec<f64>>(laws.capacity())?)
+                    .saturating_add(resources::bytes::<usize>(predicates.capacity())?)
+                    .saturating_add(law_data_bytes)
+                    .saturating_add(scene_cache_bytes);
                 resources::require(
                     limit,
                     retained
@@ -538,16 +570,22 @@ impl Composite {
                     law.clone()
                 } else {
                     let law = self.scene.law(e, &canonical, refs, &[])?;
+                    scene_cache_bytes = scene_cache_bytes
+                        .saturating_add(canonical.capacity())
+                        .saturating_add(resources::bytes::<f64>(law.len())?)
+                        .saturating_add(std::mem::size_of::<(String, Vec<f64>)>());
                     scene_rows.insert(canonical, law.clone());
                     law
                 };
+                law_data_bytes =
+                    law_data_bytes.saturating_add(resources::bytes::<f64>(law.capacity())?);
                 laws.push(law);
                 predicates.push(predicate);
             }
         }
         drop(scene_rows);
         drop(used);
-        let arena = Arena::with_people(
+        let arena = Arena::from_model_laws(
             laws,
             predicates,
             refs.len(),
@@ -556,7 +594,6 @@ impl Composite {
         Ok((None, Some(plan), Some(arena)))
     }
     pub fn query(&self, e: &mut Engine, q: &Query) -> Result<Answer> {
-        self.verify(e)?;
         self.check_query(q)?;
         let refs = self.references(q)?;
         let limit = self.budgets.resolve()?;
@@ -588,7 +625,7 @@ impl Composite {
         let base_numerical = flat.as_ref().map_or(0., |law| law.1);
         let mut known =
             resources::vector(values.len() + 1, 0., limit, "terminal probability vector")?;
-        let mut pending = BTreeMap::new();
+        let mut pending = Frontier::default();
         let initial = if flat.is_some() {
             std::mem::size_of::<(Task, f64)>()
         } else {
@@ -612,7 +649,7 @@ impl Composite {
             "initial query frontier",
         )?;
         if flat.is_some() {
-            pending.insert(Task::Flat, 1.);
+            pending.add(Task::Flat, 1.);
         } else {
             for (root, mass) in &plan.as_ref().unwrap().roots {
                 if let Some(program) = root {
@@ -623,21 +660,23 @@ impl Composite {
             }
         }
         let mut cache: BTreeMap<(usize, usize), (Vec<f64>, f64)> = BTreeMap::new();
+        let mut cache_bytes = 0usize;
         let (mut error, mut full_rows, mut direct_rows, mut components) = (0f64, 0, 0, 0);
         let mut operations = known.len();
         while !pending.is_empty() {
-            let remaining = pending.values().sum::<f64>();
-            let rounding = sejong_core::numeric::next_up(
-                base_numerical
-                    + rounding_error(
-                        &known,
-                        &pending,
-                        operations
-                            .saturating_add(arena.as_ref().map_or(0, Arena::arithmetic_operations)),
-                    ),
-            );
-            if !q.full
-                && certified(
+            if !q.full {
+                let remaining = pending.values().sum::<f64>();
+                let rounding = sejong_core::numeric::next_up(
+                    base_numerical
+                        + rounding_error(
+                            &known,
+                            &pending,
+                            operations.saturating_add(
+                                arena.as_ref().map_or(0, Arena::arithmetic_operations),
+                            ),
+                        ),
+                );
+                if certified(
                     &known,
                     remaining,
                     error,
@@ -645,10 +684,14 @@ impl Composite {
                     q.tolerance.unwrap_or(0.),
                 )
                 .is_some()
-            {
-                break;
+                {
+                    break;
+                }
             }
-            let base = fixed.saturating_add(live_bytes(&known, &pending, &cache)?);
+            let base = fixed
+                .saturating_add(resources::bytes::<f64>(known.len())?)
+                .saturating_add(pending.bytes)
+                .saturating_add(cache_bytes);
             let capacity = resources::require(limit, base, "query frontier and row storage")
                 .and_then(|()| {
                     if let Some(arena) = arena.as_mut() {
@@ -702,15 +745,15 @@ impl Composite {
                     if q.max_components.is_some_and(|n| components >= n) {
                         break;
                     }
-                    let actions =
-                        match self
-                            .query_model
-                            .query_expand(e, plan.as_ref().unwrap(), &prefix)
-                        {
-                            Ok(actions) => actions,
-                            Err(sejong_core::Error::Capacity { .. }) if !q.full => break,
-                            Err(err) => return Err(err),
-                        };
+                    let actions = match self.query_model.query_expand_prepared(
+                        e,
+                        plan.as_ref().unwrap(),
+                        &prefix,
+                    ) {
+                        Ok(actions) => actions,
+                        Err(sejong_core::Error::Capacity { .. }) if !q.full => break,
+                        Err(err) => return Err(err),
+                    };
                     let stop = actions.iter().any(|(step, p)| step.is_none() && *p > 0.);
                     let growth = actions.iter().filter(|(_, p)| *p > 0.).try_fold(
                         resources::bytes::<(Option<Step>, f64)>(actions.capacity())?,
@@ -824,6 +867,11 @@ impl Composite {
                         } else {
                             full_rows += 1;
                         }
+                        cache_bytes = cache_bytes
+                            .saturating_add(resources::bytes::<f64>(row.0.capacity())?)
+                            .saturating_add(
+                                std::mem::size_of::<((usize, usize), (Vec<f64>, f64))>(),
+                            );
                         cache.insert((stage, index), row);
                     }
                     pending.remove(&task);
@@ -996,7 +1044,6 @@ impl Composite {
         })
     }
     pub fn weights(&self, e: &mut Engine, request: &WeightRequest) -> Result<WeightResult> {
-        self.verify(e)?;
         ensure(
             !request.route.is_empty(),
             "continuous route requires an original",
@@ -1196,7 +1243,6 @@ impl Composite {
         }
     }
     pub fn joint(&self, e: &mut Engine, q: &Query) -> Result<JointAnswer> {
-        self.verify(e)?;
         self.check_query(q)?;
         let arity = q.joint.len();
         let limit = self.budgets.resolve()?;
@@ -1258,7 +1304,7 @@ impl Composite {
                     full_rows += 1;
                 }
             }
-            (probabilities, error) = partition::bounded_pushforward(
+            (probabilities, error) = partition::bounded_pushforward_prepared(
                 &probabilities,
                 input,
                 &kernel,
@@ -1296,29 +1342,8 @@ fn fits(q: &Query, limit: usize, required: usize, operation: &str) -> Result<boo
         Err(err) => Err(err),
     }
 }
-fn add(pending: &mut BTreeMap<Task, f64>, task: Task, p: f64) {
-    if p > 0. {
-        *pending.entry(task).or_insert(0.) += p;
-    }
-}
-fn live_bytes(
-    known: &[f64],
-    pending: &BTreeMap<Task, f64>,
-    cache: &BTreeMap<(usize, usize), (Vec<f64>, f64)>,
-) -> Result<usize> {
-    let mut used = resources::bytes::<f64>(known.len())?;
-    for task in pending.keys() {
-        used = used.saturating_add(std::mem::size_of::<(Task, f64)>());
-        if let Task::Prefix(p) = task {
-            used = used.saturating_add(resources::bytes::<Step>(p.steps.len())?);
-        }
-    }
-    for (law, _) in cache.values() {
-        used = used
-            .saturating_add(resources::bytes::<f64>(law.capacity())?)
-            .saturating_add(std::mem::size_of::<((usize, usize), (Vec<f64>, f64))>());
-    }
-    Ok(used)
+fn add(pending: &mut Frontier, task: Task, p: f64) {
+    pending.add(task, p);
 }
 fn rounding_error(known: &[f64], pending: &BTreeMap<Task, f64>, operations: usize) -> f64 {
     let absolute =

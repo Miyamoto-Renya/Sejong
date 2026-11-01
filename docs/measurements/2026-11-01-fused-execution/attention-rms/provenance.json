@@ -1,0 +1,14 @@
+{
+  "source_sha256_after_execution": {
+    "python/sejong_kernels/ops/kernels.py": "286cca005738a9d48b1f825f57f4df1d9c8e44344e20c4d1ebf852d12d47013e",
+    "python/sejong_kernels/ops/hierarchy.py": "0645f502c6a43021ca634b0dfbe2eba3f561a14c814ad2be11539e19ac2ce96b",
+    "crates/sejong-gpu/src/lib.rs": "4c2ad5f1847a88e650e6dd5dc35e99045e4b7c5f48f679fe7e5d3bf757a289d8",
+    "crates/sejong-gpu/src/hierarchy_ops.rs": "c14f4aa09032e9f72b28469c13a06319a58aee240140c10e48fd015553c4bebf",
+    "crates/sejong-model/src/architecture.rs": "ac9e119b37333bcd5834804227f854f70f1ceed9f4212857e4012cad2285ba80"
+  },
+  "rms_weighted_independent_pair_medians_ms": {
+    "baseline": 16.760281339287758,
+    "partial": 1.6477850899100304,
+    "scope": "sum of separately measured per-shape pair median times times actual call counts; proposed whole-step kernel budget"
+  }
+}

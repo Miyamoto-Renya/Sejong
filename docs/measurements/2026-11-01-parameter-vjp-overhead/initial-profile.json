@@ -1,0 +1,329 @@
+{
+  "profile-vjp": {
+    "operations": [
+      {
+        "gpu_seconds": 0.06387762595713191,
+        "launches": 5407,
+        "operation": "add"
+      },
+      {
+        "gpu_seconds": 0.07050319192698269,
+        "launches": 5208,
+        "operation": "copy"
+      },
+      {
+        "gpu_seconds": 0.00026728000212460757,
+        "launches": 24,
+        "operation": "cross_entropy"
+      },
+      {
+        "gpu_seconds": 0.0003023629998788237,
+        "launches": 24,
+        "operation": "cross_entropy_backward"
+      },
+      {
+        "gpu_seconds": 0.004572507995646446,
+        "launches": 330,
+        "operation": "elementwise"
+      },
+      {
+        "gpu_seconds": 0.0002470420002937317,
+        "launches": 24,
+        "operation": "embedding"
+      },
+      {
+        "gpu_seconds": 0.00040996799711138013,
+        "launches": 24,
+        "operation": "embedding_backward"
+      },
+      {
+        "gpu_seconds": 0.017736613061744604,
+        "launches": 2225,
+        "operation": "fill"
+      },
+      {
+        "gpu_seconds": 0.013582427971065007,
+        "launches": 1468,
+        "operation": "gather"
+      },
+      {
+        "gpu_seconds": 0.0066857649479061376,
+        "launches": 734,
+        "operation": "gather_backward"
+      },
+      {
+        "gpu_seconds": 0.018902151936665165,
+        "launches": 480,
+        "operation": "hierarchy_attention"
+      },
+      {
+        "gpu_seconds": 0.021966968934983046,
+        "launches": 288,
+        "operation": "hierarchy_attention_dkv"
+      },
+      {
+        "gpu_seconds": 0.015625434946268797,
+        "launches": 288,
+        "operation": "hierarchy_attention_dq"
+      },
+      {
+        "gpu_seconds": 0.006910003950819367,
+        "launches": 734,
+        "operation": "hierarchy_expert_backward"
+      },
+      {
+        "gpu_seconds": 0.013525426913984114,
+        "launches": 1468,
+        "operation": "hierarchy_expert_combine"
+      },
+      {
+        "gpu_seconds": 0.0002585629997774958,
+        "launches": 24,
+        "operation": "hierarchy_patch_broadcast"
+      },
+      {
+        "gpu_seconds": 0.0005883240001276135,
+        "launches": 24,
+        "operation": "hierarchy_patch_broadcast_backward"
+      },
+      {
+        "gpu_seconds": 0.00027000099979341034,
+        "launches": 24,
+        "operation": "hierarchy_patch_pool"
+      },
+      {
+        "gpu_seconds": 0.0002813229979947209,
+        "launches": 24,
+        "operation": "hierarchy_patch_pool_backward"
+      },
+      {
+        "gpu_seconds": 0.0021476950123906144,
+        "launches": 192,
+        "operation": "hierarchy_route_backward"
+      },
+      {
+        "gpu_seconds": 0.0035855899732559907,
+        "launches": 384,
+        "operation": "hierarchy_route_pack"
+      },
+      {
+        "gpu_seconds": 0.0033143469998613,
+        "launches": 384,
+        "operation": "hierarchy_route_topk"
+      },
+      {
+        "gpu_seconds": 0.5512244875058504,
+        "launches": 15096,
+        "operation": "matmul"
+      },
+      {
+        "gpu_seconds": 0.04719670386053623,
+        "launches": 1630,
+        "operation": "parameter_basis_register"
+      },
+      {
+        "gpu_seconds": 0.005336521983146668,
+        "launches": 3,
+        "operation": "parameter_component_norm"
+      },
+      {
+        "gpu_seconds": 0.020681079864501954,
+        "launches": 3,
+        "operation": "parameter_gradient_tiles"
+      },
+      {
+        "gpu_seconds": 0.028315879929810748,
+        "launches": 1630,
+        "operation": "parameter_indices"
+      },
+      {
+        "gpu_seconds": 0.0453960779076442,
+        "launches": 1630,
+        "operation": "parameter_prepare"
+      },
+      {
+        "gpu_seconds": 0.009535916997119767,
+        "launches": 1056,
+        "operation": "rmsnorm"
+      },
+      {
+        "gpu_seconds": 0.04373885495401921,
+        "launches": 672,
+        "operation": "rmsnorm_backward"
+      },
+      {
+        "gpu_seconds": 0.015390880991704756,
+        "launches": 1536,
+        "operation": "rope"
+      },
+      {
+        "gpu_seconds": 0.013089727027807337,
+        "launches": 1564,
+        "operation": "swiglu"
+      },
+      {
+        "gpu_seconds": 0.0084731499888003,
+        "launches": 830,
+        "operation": "swiglu_backward"
+      }
+    ],
+    "scope": "HIP event durations in an explicitly instrumented run"
+  },
+  "profile-exact": {
+    "operations": [
+      {
+        "gpu_seconds": 0.0925339710088449,
+        "launches": 7825,
+        "operation": "add"
+      },
+      {
+        "gpu_seconds": 0.05670108295651155,
+        "launches": 5208,
+        "operation": "copy"
+      },
+      {
+        "gpu_seconds": 0.00026320099830627445,
+        "launches": 24,
+        "operation": "cross_entropy"
+      },
+      {
+        "gpu_seconds": 0.0002950410023331642,
+        "launches": 24,
+        "operation": "cross_entropy_backward"
+      },
+      {
+        "gpu_seconds": 0.007329616978764529,
+        "launches": 597,
+        "operation": "elementwise"
+      },
+      {
+        "gpu_seconds": 0.00023812100011855362,
+        "launches": 24,
+        "operation": "embedding"
+      },
+      {
+        "gpu_seconds": 0.0003912050044164062,
+        "launches": 24,
+        "operation": "embedding_backward"
+      },
+      {
+        "gpu_seconds": 0.016933396965265204,
+        "launches": 2225,
+        "operation": "fill"
+      },
+      {
+        "gpu_seconds": 0.012789290025830242,
+        "launches": 1468,
+        "operation": "gather"
+      },
+      {
+        "gpu_seconds": 0.006294565995223826,
+        "launches": 734,
+        "operation": "gather_backward"
+      },
+      {
+        "gpu_seconds": 0.01873113996535543,
+        "launches": 480,
+        "operation": "hierarchy_attention"
+      },
+      {
+        "gpu_seconds": 0.021309387002140277,
+        "launches": 288,
+        "operation": "hierarchy_attention_dkv"
+      },
+      {
+        "gpu_seconds": 0.014941845960915094,
+        "launches": 288,
+        "operation": "hierarchy_attention_dq"
+      },
+      {
+        "gpu_seconds": 0.00650619895476848,
+        "launches": 734,
+        "operation": "hierarchy_expert_backward"
+      },
+      {
+        "gpu_seconds": 0.012989491939544656,
+        "launches": 1468,
+        "operation": "hierarchy_expert_combine"
+      },
+      {
+        "gpu_seconds": 0.0002787609994411469,
+        "launches": 24,
+        "operation": "hierarchy_patch_broadcast"
+      },
+      {
+        "gpu_seconds": 0.0002699219966307282,
+        "launches": 24,
+        "operation": "hierarchy_patch_broadcast_backward"
+      },
+      {
+        "gpu_seconds": 0.00027532100118696695,
+        "launches": 24,
+        "operation": "hierarchy_patch_pool"
+      },
+      {
+        "gpu_seconds": 0.00024696200154721736,
+        "launches": 24,
+        "operation": "hierarchy_patch_pool_backward"
+      },
+      {
+        "gpu_seconds": 0.0015706900069490087,
+        "launches": 192,
+        "operation": "hierarchy_route_backward"
+      },
+      {
+        "gpu_seconds": 0.0033833029940724393,
+        "launches": 384,
+        "operation": "hierarchy_route_pack"
+      },
+      {
+        "gpu_seconds": 0.0032214610092341917,
+        "launches": 384,
+        "operation": "hierarchy_route_topk"
+      },
+      {
+        "gpu_seconds": 0.5571868742806809,
+        "launches": 15096,
+        "operation": "matmul"
+      },
+      {
+        "gpu_seconds": 0.0019818939566612244,
+        "launches": 3,
+        "operation": "parameter_component_norm"
+      },
+      {
+        "gpu_seconds": 0.005954282045364379,
+        "launches": 3,
+        "operation": "parameter_gradient_tiles"
+      },
+      {
+        "gpu_seconds": 0.008908626026473918,
+        "launches": 1056,
+        "operation": "rmsnorm"
+      },
+      {
+        "gpu_seconds": 0.043329826852306824,
+        "launches": 672,
+        "operation": "rmsnorm_backward"
+      },
+      {
+        "gpu_seconds": 0.014667335971258555,
+        "launches": 1536,
+        "operation": "rope"
+      },
+      {
+        "gpu_seconds": 0.012646206999663224,
+        "launches": 1564,
+        "operation": "swiglu"
+      },
+      {
+        "gpu_seconds": 0.007627056025434272,
+        "launches": 830,
+        "operation": "swiglu_backward"
+      }
+    ],
+    "scope": "HIP event durations in an explicitly instrumented run"
+  },
+  "diagnostic_steps": 3,
+  "capture": "before fixed routing and resource reuse; initialization and three training steps; event intervals around individual HIP launches"
+}

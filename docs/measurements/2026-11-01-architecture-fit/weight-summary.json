@@ -1,0 +1,104 @@
+{
+  "baseline-vs-retain": {
+    "parameters": 26488192,
+    "different_elements": 23,
+    "max_abs_weight_difference": 3.725290298461914e-09,
+    "relative_l2": 2.4964371600725942e-11,
+    "nonfinite": 0,
+    "reference": "baseline",
+    "candidate": "retain",
+    "data_rng_equal": true,
+    "step_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": true,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  },
+  "retain-vs-mirror": {
+    "parameters": 26488192,
+    "different_elements": 19,
+    "max_abs_weight_difference": 3.725290298461914e-09,
+    "relative_l2": 2.5527887645128202e-11,
+    "nonfinite": 0,
+    "reference": "retain",
+    "candidate": "mirror",
+    "data_rng_equal": true,
+    "step_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": true,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  },
+  "dot2-vs-combined": {
+    "parameters": 26488192,
+    "different_elements": 21,
+    "max_abs_weight_difference": 7.450580596923828e-09,
+    "relative_l2": 4.7434226027230296e-11,
+    "nonfinite": 0,
+    "reference": "dot2",
+    "candidate": "combined",
+    "data_rng_equal": true,
+    "step_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": true,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  },
+  "baseline-vs-combined-b8": {
+    "parameters": 26488192,
+    "different_elements": 16816924,
+    "max_abs_weight_difference": 4.544854164123535e-05,
+    "relative_l2": 7.0260302861697066e-06,
+    "nonfinite": 0,
+    "reference": "baseline",
+    "candidate": "combined-b8",
+    "data_rng_equal": true,
+    "step_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": false,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  },
+  "combined-b8-vs-dot2-b8": {
+    "parameters": 26488192,
+    "different_elements": 28,
+    "max_abs_weight_difference": 7.450580596923828e-09,
+    "relative_l2": 5.5323566040837745e-11,
+    "nonfinite": 0,
+    "reference": "runs/fit-combined-b8/run-000/model",
+    "candidate": "runs/fit-dot2-b8/run-000/model",
+    "step_equal": true,
+    "data_rng_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": true,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  },
+  "long-baseline-vs-long-combined-b8": {
+    "parameters": 26488192,
+    "different_elements": 22539902,
+    "max_abs_weight_difference": 0.0001143505796790123,
+    "relative_l2": 2.341304754869676e-05,
+    "nonfinite": 0,
+    "reference": "runs/fit-long-baseline/run-000/model",
+    "candidate": "runs/fit-long-combined-b8/run-000/model",
+    "step_equal": true,
+    "data_rng_equal": true,
+    "optimizer_tensors_equal": {
+      "sgd.basis_rng": true,
+      "sgd.parameter_rng": false,
+      "sgd.sampling_rng": true,
+      "sgd.version": true
+    }
+  }
+}

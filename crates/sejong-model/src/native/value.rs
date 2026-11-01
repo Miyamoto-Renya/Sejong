@@ -137,15 +137,15 @@ impl NativeValue {
         }
         let tensor = g.engine.from_i32(&[ids.len()], &ids)?;
         let b = self.body.bind(g, training)?;
-        let embedding = g.leaf(self.embedding.clone(), training);
+        let embedding = g.parameter(self.embedding.clone(), training);
         let compute = g.cast(embedding, self.body.config.precision)?;
         let input = g.embedding(compute, &tensor, self.body.config.precision)?;
         let hidden = self.body.hidden_from(g, &b, input, sequence)?;
         let last = g.engine.from_i32(&[selected.len()], &selected)?;
         let selected = g.gather(hidden, &last)?;
         let selected = g.cast(selected, DType::F32)?;
-        let head = g.leaf(self.head.clone(), training);
-        let bias = g.leaf(self.bias.clone(), training);
+        let head = g.parameter(self.head.clone(), training);
+        let bias = g.parameter(self.bias.clone(), training);
         let logits = g.affine(selected, head, bias)?;
         let mut leaves = self
             .body
@@ -159,7 +159,18 @@ impl NativeValue {
         Ok((logits, leaves))
     }
     pub fn signature(&self, e: &mut Engine) -> Result<String> {
+        if let Some(seal) = &self.seal {
+            return Ok(seal.clone());
+        }
+        self.compute_signature(e)
+    }
+    fn compute_signature(&self, e: &mut Engine) -> Result<String> {
         signature(e, &self.parameters(), &self.metadata)
+    }
+    pub fn sealed_signature(&self) -> Result<&str> {
+        self.seal.as_deref().ok_or_else(|| {
+            sejong_core::Error::Message("native original requires a trained sealed snapshot".into())
+        })
     }
     pub fn seal(&mut self, e: &mut Engine) -> Result<()> {
         ensure(self.seal.is_none(), "native original already sealed")?;
@@ -167,16 +178,14 @@ impl NativeValue {
         Ok(())
     }
     pub fn verify(&self, e: &mut Engine) -> Result<()> {
-        let expected = self.seal.as_ref().ok_or_else(|| {
-            sejong_core::Error::Message("native original requires a trained sealed snapshot".into())
-        })?;
+        let expected = self.sealed_signature()?;
         ensure(
-            self.signature(e)? == *expected,
+            self.compute_signature(e)? == expected,
             "native value original changed after sealing",
         )
     }
     pub fn row(&self, e: &mut Engine, index: usize) -> Result<Vec<f64>> {
-        self.verify(e)?;
+        self.sealed_signature()?;
         let mut g = Graph::new(e, false);
         let (logits, _) = self.forward(&mut g, index, false)?;
         softmax(
@@ -206,10 +215,10 @@ impl NativeValue {
         Ok(())
     }
     pub fn save(&self, e: &mut Engine, path: &Path) -> Result<()> {
-        self.verify(e)?;
+        let seal = self.sealed_signature()?;
         atomic_directory(path, |dir| {
             self.write(e, dir)?;
-            std::fs::write(dir.join("signature"), self.signature(e)?)?;
+            std::fs::write(dir.join("signature"), seal)?;
             Ok(())
         })
     }

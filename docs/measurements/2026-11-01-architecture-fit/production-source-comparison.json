@@ -1,0 +1,6 @@
+{
+  "files_compared": 69,
+  "changed_files": [],
+  "sha256_reference": "source-sha256.json",
+  "scope": "Cargo manifests, config, Rust and Python source, production release executable"
+}

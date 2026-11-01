@@ -12,6 +12,34 @@ pub struct Clause {
     pub latent: Option<usize>,
     pub operators: Vec<Operator>,
 }
+pub(super) struct Registry(BTreeMap<String, usize>);
+impl Registry {
+    pub(super) fn compile(lexica: &[Classifier]) -> Result<Self> {
+        let mut registry = BTreeMap::new();
+        for (owner, model) in lexica.iter().enumerate() {
+            ensure(
+                model.metadata.role == sejong_core::native::Role::Lexical
+                    && model
+                        .metadata
+                        .meanings
+                        .iter()
+                        .map(|s| s.to_ascii_lowercase())
+                        .collect::<Vec<_>>()
+                        == ["use", "ignore"],
+                "lexical meanings must follow the Use/Ignore ABI",
+            )?;
+            for phrase in &model.metadata.phrases {
+                ensure(
+                    registry
+                        .insert(phrase.to_ascii_lowercase(), owner)
+                        .is_none(),
+                    "lexical namespaces must be disjoint",
+                )?;
+            }
+        }
+        Ok(Self(registry))
+    }
+}
 fn recognize(
     text: &str,
     refs: &[String],
@@ -48,15 +76,20 @@ fn operator(
     instruction: &Classifier,
     request: &Classifier,
     cache: &mut BTreeMap<String, Operator>,
+    cache_bytes: &mut usize,
 ) -> Result<Operator> {
     if let Some(op) = cache.get(text) {
         return Ok(op.clone());
     }
-    let op = Operator::from_laws(&(
-        scene.law(e, text, refs, &[])?,
-        instruction.law(e, text, refs, &[])?,
-        request.law(e, text, refs, &[])?,
-    ))?;
+    let op = Operator::from_model_laws(
+        &(
+            scene.law(e, text, refs, &[])?,
+            instruction.law(e, text, refs, &[])?,
+            request.law(e, text, refs, &[])?,
+        ),
+        refs.len(),
+    )?;
+    *cache_bytes = cache_bytes.saturating_add(op.memory_bytes());
     cache.insert(text.into(), op.clone());
     Ok(op)
 }
@@ -71,32 +104,37 @@ pub fn bind(
     budgets: &Budgets,
 ) -> Result<(Vec<f64>, f64)> {
     let limit = budgets.resolve()?;
-    let mut registry = BTreeMap::new();
-    for (owner, model) in lexica.iter().enumerate() {
-        ensure(
-            model
-                .metadata
-                .meanings
-                .iter()
-                .map(|s| s.to_ascii_lowercase())
-                .collect::<Vec<_>>()
-                == ["use", "ignore"],
-            "lexical meanings must follow the Use/Ignore ABI",
-        )?;
-        for phrase in &model.metadata.phrases {
-            ensure(
-                registry
-                    .insert(phrase.to_ascii_lowercase(), owner)
-                    .is_none(),
-                "lexical namespaces must be disjoint",
-            )?;
-        }
-    }
+    let registry = Registry::compile(lexica)?;
+    bind_prepared(
+        e,
+        text,
+        refs,
+        scene,
+        instruction,
+        request,
+        lexica,
+        &registry,
+        limit,
+    )
+}
+pub(super) fn bind_prepared(
+    e: &mut Engine,
+    text: &str,
+    refs: &[String],
+    scene: &Classifier,
+    instruction: &Classifier,
+    request: &Classifier,
+    lexica: &[Classifier],
+    registry: &Registry,
+    limit: usize,
+) -> Result<(Vec<f64>, f64)> {
     let mut latent_ids = BTreeMap::new();
     let mut priors = vec![];
     let mut clauses = vec![];
     let mut cache = BTreeMap::new();
     let mut compiled = 0usize;
+    let mut cache_bytes = 0usize;
+    let mut clause_bytes = 0usize;
     let operator_bytes = semantic::operator_bytes(refs.len())?;
     let laws_entries = [
         sejong_core::native::Role::Scene,
@@ -112,7 +150,7 @@ pub fn bind(
         .split_inclusive(['.', ';', '?'])
         .filter(|s| s.chars().any(|c| c.is_alphanumeric()))
     {
-        let recognized = recognize(part, refs, &registry);
+        let recognized = recognize(part, refs, &registry.0);
         let meanings = if recognized.is_some() { 2 } else { 1 };
         resources::require(
             limit,
@@ -127,10 +165,6 @@ pub fn bind(
                 *id
             } else {
                 let p = lexica[owner].law(e, &phrase, &[], &[])?;
-                ensure(
-                    p.len() == 2 && resources::normalized(&p),
-                    "normalized Use/Ignore lexical law required",
-                )?;
                 let id = priors.len();
                 priors.push(p);
                 latent_ids.insert(key, id);
@@ -147,6 +181,7 @@ pub fn bind(
                         instruction,
                         request,
                         &mut cache,
+                        &mut cache_bytes,
                     )
                 })
                 .collect::<Result<_>>()?;
@@ -165,27 +200,26 @@ pub fn bind(
                     instruction,
                     request,
                     &mut cache,
+                    &mut cache_bytes,
                 )?],
             });
         }
-        let used = clauses
-            .iter()
-            .map(|c: &Clause| {
-                c.operators
-                    .iter()
-                    .map(Operator::memory_bytes)
-                    .sum::<usize>()
-            })
-            .sum::<usize>()
-            + cache.values().map(Operator::memory_bytes).sum::<usize>();
-        compiled = used;
-        resources::require(limit, used, "compiled lexical/semantic clauses")?;
+        clause_bytes = clause_bytes.saturating_add(
+            clauses
+                .last()
+                .unwrap()
+                .operators
+                .iter()
+                .map(Operator::memory_bytes)
+                .sum::<usize>(),
+        );
+        compiled = clause_bytes.saturating_add(cache_bytes);
+        resources::require(limit, compiled, "compiled lexical/semantic clauses")?;
     }
     ensure(!clauses.is_empty(), "query requires at least one clause")?;
     drop(cache);
-    drop(registry);
     drop(latent_ids);
-    execute_bounded(&clauses, &priors, refs.len(), budgets)
+    execute_prepared(&clauses, &priors, refs.len(), limit)
 }
 /// Executes already compiled conditional operators with bounded live choices.
 pub fn execute(
@@ -217,6 +251,14 @@ fn execute_bounded(
         )?;
     }
     let limit = budgets.resolve()?;
+    execute_prepared(clauses, priors, people, limit)
+}
+fn execute_prepared(
+    clauses: &[Clause],
+    priors: &[Vec<f64>],
+    people: usize,
+    limit: usize,
+) -> Result<(Vec<f64>, f64)> {
     let states = semantic::states(people)?;
     let state_bytes = resources::bytes::<f64>(states)?;
     let base = clauses
